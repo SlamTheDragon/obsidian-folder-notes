@@ -1,0 +1,53 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Tree Items, File Explorer & Path Styling
+body:not(.is-grabbing) .tree-item-self.fn-is-active:hover,
+body:not(.disable-folder-highlight) .tree-item-self.fn-is-active {
+  color: $nav-item-color-active;
+  background-color: $nav-item-background-active;
+  font-weight: $nav-item-weight-active;
+}
+
+.folder-note-underline .has-folder-note .nav-folder-title-content {
+  text-decoration-line: underline;
+  text-decoration-color: $text-faint;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 1px;
+}
+
+.folder-note-underline-path .has-folder-note.view-header-breadcrumb {
+  text-decoration-line: underline;
+  text-decoration-color: $text-faint;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.folder-note-bold .has-folder-note .nav-folder-title-content,
+.folder-note-bold-path .has-folder-note.view-header-breadcrumb {
+  font-weight: bold;
+}
+
+.folder-note-cursive .has-folder-note .nav-folder-title-content,
+.folder-note-cursive-path .has-folder-note.view-header-breadcrumb {
+  font-style: italic;
+}
+
+.folder-note-hide-name-path .hide-folder-note-title-in-path .is-last-separator,
+.folder-note-hide-name-path .hide-folder-note-title-in-path .path-is-folder-note {
+  display: none;
+}
+
+/* Collapse Icon Handling */
+.fn-folder-overview-collapse-icon {
+  display: block !important;
+}
+
+.fn-has-no-files .collapse-icon,
+.fn-hide-collapse-icon .has-folder-note.only-has-folder-note .tree-item-icon,
+body.fn-hide-collapse-icon.fn-ignore-attachment-folder .only-has-folder-note .fn-empty-folder.fn-has-attachment-folder .tree-item-icon,
+body.fn-hide-collapse-icon .only-has-folder-note .fn-empty-folder:not(.fn-has-attachment-folder) .tree-item-icon,
+body.fn-hide-empty-collapse-icon :not(.only-has-folder-note) > .fn-empty-folder:not(.fn-has-attachment-folder) .tree-item-icon,
+body.fn-hide-collapse-icon.only-has-folder-note:not(.is-collapsed):not(.show-folder-note-in-explorer) > .nav-folder-children {
+  display: none;
+}

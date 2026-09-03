@@ -1,0 +1,43 @@
+import { BackupWarningModal } from './BackupWarningModal';
+import type FolderNotesPlugin from '../../main';
+import { Setting } from 'obsidian';
+
+export class RenameFolderNotesModal extends BackupWarningModal {
+	constructor(
+		plugin: FolderNotesPlugin,
+		title: string,
+		description: string,
+		callback: (oldMethod: string) => void,
+		args: [string],
+	) {
+		super(plugin, title, description, callback, args);
+	}
+
+	override insertCustomHtml(): void {
+		const { contentEl } = this;
+		new Setting(contentEl)
+			.setName('Old folder note name')
+			.setDesc('Every folder note that matches this name will be renamed to the new folder note name.')
+			.addText((text) => text
+				.setPlaceholder('Enter the old folder note name')
+				.setValue(this.plugin.settings.oldFolderNoteName || '')
+				.onChange(async (value) => {
+					this.plugin.settings.oldFolderNoteName = value;
+				}),
+			);
+
+		new Setting(contentEl)
+			.setName('New folder note name')
+			.setDesc('Every folder note that matches the old folder note name will be renamed to this name.')
+			.addText((text) => text
+				.setPlaceholder('Enter the new folder note name')
+				.setValue(this.plugin.settings.folderNoteName || '')
+				.onChange(async (value) => {
+					this.plugin.settings.folderNoteName = value;
+					this.plugin.settingsTab?.display();
+				}),
+			);
+	}
+}
+
+export default RenameFolderNotesModal;

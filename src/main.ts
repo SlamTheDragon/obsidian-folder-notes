@@ -7,30 +7,33 @@ import {
 	requireApiVersion, Platform, debounce,
 } from 'obsidian';
 import {
-	type FolderNotesSettings, DEFAULT_SETTINGS, SettingsTab,
-} from './settings/SettingsTab';
+	type FolderNotesSettings, DEFAULT_SETTINGS,
+} from './backend/types/settings';
+import { SettingsTab } from './frontend/settings/SettingsTab';
 import { FolderOverview, type defaultOverviewSettings } from './obsidian-folder-overview/src/FolderOverview';
 import { Commands } from './Commands';
 import type { FileExplorerWorkspaceLeaf } from './globals';
 import {
 	registerFileExplorerObserver, unregisterFileExplorerObserver,
-} from './events/MutationObserver';
-import { handleRename } from './events/handleRename';
+} from './backend/events/FileExplorerObserver';
 import {
-	getFolderNote, getFolder, openFolderNote, createFolderNote,
-} from './functions/folderNoteFunctions';
-import { handleCreate } from './events/handleCreate';
-import { FrontMatterTitlePluginHandler } from './events/FrontMatterTitle';
+	handleRename, handleCreate, handleDelete,
+} from './backend/events/VaultSyncHandler';
+import {
+	getFolderNote, getFolder,
+} from './backend/core/FolderNoteResolver';
+import {
+	openFolderNote, createFolderNote,
+} from './backend/core/FolderNoteService';
+import { FrontMatterTitlePluginHandler } from './backend/events/FrontMatterTitle';
 import { FolderOverviewSettings } from './obsidian-folder-overview/src/modals/Settings';
-import { TabManager } from './events/TabManager';
-import './functions/ListComponent';
-import { handleDelete } from './events/handleDelete';
+import { TabManager } from './backend/events/TabManager';
 import {
 	addCSSClassToFileExplorerEl, getFileExplorerElement, removeCSSClassFromFileExplorerEL,
 	refreshAllFolderStyles, setActiveFolder, removeActiveFolder,
-} from './functions/styleFunctions';
-import { getExcludedFolder } from './ExcludeFolders/functions/folderFunctions';
-import { getFileExplorer } from './functions/utils';
+} from './backend/utils/domUtils';
+import { getExcludedFolder } from './backend/core/ExcludeService';
+import { getFileExplorer } from './backend/utils/pathUtils';
 import { FOLDER_OVERVIEW_VIEW, FolderOverviewView } from './obsidian-folder-overview/src/view';
 import { registerOverviewCommands } from './obsidian-folder-overview/src/Commands';
 import { updateOverviewView, updateViewDropdown } from './obsidian-folder-overview/src/main';

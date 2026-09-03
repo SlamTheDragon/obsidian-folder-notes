@@ -1,0 +1,231 @@
+/* eslint-disable max-len */
+import { Setting } from 'obsidian';
+import type { SettingsTab } from './SettingsTab';
+
+const MAX_FILE_EXPLORER_REVEAL_MARGIN = 10;
+
+export async function renderFileExplorer(settingsTab: SettingsTab): Promise<void> {
+	const containerEl = settingsTab.settingsPage;
+
+	new Setting(containerEl)
+		.setName('Hide folder note')
+		.setDesc('Hide the folder note file from appearing in the file explorer')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.hideFolderNote)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.hideFolderNote = value;
+					await settingsTab.plugin.saveSettings();
+					if (value) {
+						activeDocument.body.classList.add('hide-folder-note');
+					} else {
+						activeDocument.body.classList.remove('hide-folder-note');
+					}
+					settingsTab.display();
+				}),
+		);
+
+	const setting2 = new Setting(containerEl)
+		.setName('Disable click-to-open folder note on mobile')
+		.setDesc('Prevents folder notes from opening when tapping the folder name or surrounding area on mobile devices. They can now only be opened via the context menu or a command.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.disableOpenFolderNoteOnClick)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.disableOpenFolderNoteOnClick = value;
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	setting2.infoEl.appendText('Requires a restart to take effect');
+	const setting2AccentColor = settingsTab.app.vault.getConfig('accentColor') as string || '#7d5bed';
+	setting2.infoEl.style.color = setting2AccentColor;
+
+	new Setting(containerEl)
+		.setName('Open folder notes by only clicking directly on the folder name')
+		.setDesc('Only allow folder notes to open when clicking directly on the folder name in the file explorer')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(!settingsTab.plugin.settings.stopWhitespaceCollapsing)
+				.onChange(async (value) => {
+					if (!value) {
+						activeDocument.body.classList.add('fn-whitespace-stop-collapsing');
+					} else {
+						activeDocument.body.classList.remove('fn-whitespace-stop-collapsing');
+					}
+					settingsTab.plugin.settings.stopWhitespaceCollapsing = !value;
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	const disableSetting = new Setting(containerEl);
+	disableSetting.setName('Disable folder collapsing');
+	disableSetting.setDesc('When enabled, folders in the file explorer will only collapse when clicking the collapse icon next to the folder name, not when clicking near a folder name when it has a folder note.');
+	disableSetting.addToggle((toggle) =>
+		toggle
+			.setValue(!settingsTab.plugin.settings.enableCollapsing)
+			.onChange(async (value) => {
+				settingsTab.plugin.settings.enableCollapsing = !value;
+				await settingsTab.plugin.saveSettings();
+			}),
+	);
+	disableSetting.infoEl.appendText('Requires a restart to take effect');
+	const accentColor = settingsTab.app.vault.getConfig('accentColor') as string || '#7d5bed';
+	disableSetting.infoEl.style.color = accentColor;
+
+	new Setting(containerEl)
+		.setName('Use submenus')
+		.setDesc('Use submenus for file/folder commands')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.useSubmenus)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.useSubmenus = value;
+					await settingsTab.plugin.saveSettings();
+					settingsTab.display();
+				}),
+		);
+
+	if (settingsTab.plugin.settings.frontMatterTitle.enabled) {
+		new Setting(containerEl)
+			.setName('Auto update folder name in the file explorer (front matter title plugin only)')
+			.setDesc('Automatically update the folder name in the file explorer when the front matter title plugin is enabled and the title for a folder note is changed in the front matter. This will not change the file name, only the displayed name in the file explorer.')
+			.addToggle((toggle) =>
+				toggle
+					.setValue(settingsTab.plugin.settings.frontMatterTitle.explorer)
+					.onChange(async (value) => {
+						settingsTab.plugin.settings.frontMatterTitle.explorer = value;
+						await settingsTab.plugin.saveSettings();
+						settingsTab.plugin.app.vault.getFiles().forEach((file) => {
+							settingsTab.plugin.fmtpHandler?.fmptUpdateFileName(
+								{ id: '', result: false, path: file.path, pathOnly: false },
+								false,
+							);
+						});
+					}),
+			);
+	}
+
+	containerEl.createEl('h3', { text: 'Style settings' });
+
+	new Setting(containerEl)
+		.setName('Underline folder names with folder notes')
+		.setDesc('Adds an underline to folders that have an associated folder note in the file explorer.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.underlineFolder)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.underlineFolder = value;
+					if (value) {
+						activeDocument.body.classList.add('folder-note-underline');
+					} else {
+						activeDocument.body.classList.remove('folder-note-underline');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Bold folder names with folder notes')
+		.setDesc('Make the folder name bold in the file explorer when it has a folder note')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.boldName)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.boldName = value;
+					if (value) {
+						activeDocument.body.classList.add('folder-note-bold');
+					} else {
+						activeDocument.body.classList.remove('folder-note-bold');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Italicize folder names with folder notes')
+		.setDesc('Make the folder name italic in the file explorer when it has a folder note')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.cursiveName)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.cursiveName = value;
+					if (value) {
+						activeDocument.body.classList.add('folder-note-cursive');
+					} else {
+						activeDocument.body.classList.remove('folder-note-cursive');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Highlight active folder')
+		.setDesc('Highlight the folder in the file explorer when its folder note is currently open.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(!settingsTab.plugin.settings.disableFolderHighlighting)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.disableFolderHighlighting = !value;
+					if (!value) {
+						activeDocument.body.classList.add('disable-folder-highlight');
+					} else {
+						activeDocument.body.classList.remove('disable-folder-highlight');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Hide collapsing icon for folders with only a folder note')
+		.setDesc('Hides the collapse/expand icon when a folder contains only its folder note.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.hideCollapsingIcon)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.hideCollapsingIcon = value;
+					if (value) {
+						activeDocument.body.classList.add('fn-hide-collapse-icon');
+					} else {
+						activeDocument.body.classList.remove('fn-hide-collapse-icon');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Hide collapsing icon for empty folders')
+		.setDesc('Hides the collapse/expand icon for folders that are completely empty.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.hideCollapsingIconForEmptyFolders)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.hideCollapsingIconForEmptyFolders = value;
+					if (value) {
+						activeDocument.body.classList.add('fn-hide-empty-collapse-icon');
+					} else {
+						activeDocument.body.classList.remove('fn-hide-empty-collapse-icon');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(containerEl)
+		.setName('Ignore attachment folder for collapse icon hiding')
+		.setDesc('Treat folders that only contain an attachment folder and a folder note as single-item folders.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.ignoreAttachmentFolder)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.ignoreAttachmentFolder = value;
+					if (value) {
+						activeDocument.body.classList.add('fn-ignore-attachment-folder');
+					} else {
+						activeDocument.body.classList.remove('fn-ignore-attachment-folder');
+					}
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+}
+
+export default renderFileExplorer;

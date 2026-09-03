@@ -1,0 +1,55 @@
+import { FuzzySuggestModal, type TFile } from 'obsidian';
+import type FolderNotesPlugin from '../../main';
+import { createFolderNote } from '../../backend/core/FolderNoteService';
+
+export class AskForExtensionModal extends FuzzySuggestModal<string> {
+	plugin: FolderNotesPlugin;
+	extension: string;
+	folderPath: string;
+	openFile: boolean;
+	useModal: boolean | undefined;
+	existingNote: TFile | undefined;
+	constructor(
+		plugin: FolderNotesPlugin,
+		folderPath: string,
+		openFile: boolean,
+		extension: string,
+		useModal?: boolean,
+		existingNote?: TFile,
+	) {
+		super(plugin.app);
+		this.plugin = plugin;
+		this.folderPath = folderPath;
+		this.extension = extension;
+		this.openFile = openFile;
+		this.useModal = useModal;
+		this.existingNote = existingNote;
+		plugin.askModalCurrentlyOpen = true;
+	}
+
+	getItems(): string[] {
+		return this.plugin.settings.supportedFileTypes.filter(
+			(item) => item.toLowerCase() !== '.ask',
+		);
+	}
+
+	getItemText(item: string): string {
+		return item;
+	}
+
+	onChooseItem(item: string, _evt: MouseEvent | KeyboardEvent): void {
+		this.plugin.askModalCurrentlyOpen = false;
+		this.extension = '.' + item;
+		void createFolderNote(
+			this.plugin,
+			this.folderPath,
+			this.openFile,
+			this.extension,
+			this.useModal,
+			this.existingNote,
+		);
+		this.close();
+	}
+}
+
+export default AskForExtensionModal;

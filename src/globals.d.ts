@@ -38,41 +38,41 @@ interface FileExplorerViewFileItem extends TAbstractFile {
 type FileOrFolderItem = FolderItem | FileItem;
 
 interface FileItem {
-    el: HTMLDivElement;
-    file: TFile;
-    fileExplorer: FileExplorerView;
-    selfEl: HTMLDivElement;
-    innerEl: HTMLDivElement;
+	el: HTMLDivElement;
+	file: TFile;
+	fileExplorer: FileExplorerView;
+	selfEl: HTMLDivElement;
+	innerEl: HTMLDivElement;
 }
 
 interface FolderItem {
-    el: HTMLDivElement;
-    fileExplorer: FileExplorerView;
-    selfEl: HTMLDivElement;
-    innerEl: HTMLDivElement;
-    file: TFolder;
-    children: FileOrFolderItem[];
-    childrenEl: HTMLDivElement;
-    collapseIndicatorEl: HTMLDivElement;
-    collapsed: boolean;
-    setCollapsed: (collapsed: boolean) => void;
-    pusherEl: HTMLDivElement;
+	el: HTMLDivElement;
+	fileExplorer: FileExplorerView;
+	selfEl: HTMLDivElement;
+	innerEl: HTMLDivElement;
+	file: TFolder;
+	children: FileOrFolderItem[];
+	childrenEl: HTMLDivElement;
+	collapseIndicatorEl: HTMLDivElement;
+	collapsed: boolean;
+	setCollapsed: (collapsed: boolean) => void;
+	pusherEl: HTMLDivElement;
 }
 
 interface TreeItem {
-    focusedItem: FileOrFolderItem;
+	focusedItem: FileOrFolderItem;
 	infinityScroll?: {
 		rootMargin: number;
 		scrollIntoView: (item: FileExplorerViewFileItem, margin: number) => void;
 	};
-    setFocusedItem: (item: FileOrFolderItem, moveViewport: boolean) => void;
-    selectedDoms: Set<FileOrFolderItem>;
+	setFocusedItem: (item: FileOrFolderItem, moveViewport: boolean) => void;
+	selectedDoms: Set<FileOrFolderItem>;
 }
 interface FileExplorerView extends View {
 	autoRevealFile?: boolean;
 	fileItems: { [path: string]: FileExplorerViewFileItem };
-    activeDom: FileOrFolderItem;
-    tree: TreeItem;
+	activeDom: FileOrFolderItem;
+	tree: TreeItem;
 }
 
 declare global {

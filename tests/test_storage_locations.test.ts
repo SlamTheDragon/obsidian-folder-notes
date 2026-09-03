@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { getFolderNameFromPathString, getFolderPathFromString } from '../src/functions/utils';
+import { getFolderNameFromPathString, getFolderPathFromString } from '../src/backend/utils/pathUtils';
 
 describe('Folder Note Storage Location Resolution', () => {
   function computeFolderNotePath(

@@ -4,7 +4,7 @@ import {
   getFolderPathFromString,
   removeExtension,
   getFileNameFromPathString
-} from '../src/functions/utils';
+} from '../src/backend/utils/pathUtils';
 
 describe('Folder Note Utilities & Path Parsing', () => {
   it('should correctly extract folder name from path string', () => {

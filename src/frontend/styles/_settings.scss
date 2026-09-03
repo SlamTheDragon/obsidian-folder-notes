@@ -1,0 +1,121 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Settings Tabs & Exclusion Lists
+.fn-settings-tab-bar {
+  display: flex;
+  flex-direction: row;
+  padding-bottom: 1rem;
+}
+
+.fn-settings-tab {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: 10px;
+  border: 1px solid $background-modifier-border;
+}
+
+.fn-settings-tab-active {
+  background-color: $color-accent;
+  color: $text-on-accent;
+}
+
+.fn-settings-tab-name {
+  font-weight: bold;
+}
+
+.fn-settings-tab-icon {
+  display: flex;
+}
+
+.fn-advanced-settings {
+  margin-top: var(--size-4-4);
+
+  > summary {
+    cursor: pointer;
+    font-size: var(--h3-size);
+    font-weight: var(--h3-weight);
+    padding: var(--size-4-2) 0;
+  }
+}
+
+.fn-excluded-folder-heading {
+  margin-top: 0 !important;
+  border-top: 1px solid $background-modifier-border;
+}
+
+.add-exclude-folder-item,
+.fn-exclude-folder-list {
+  padding-bottom: 0 !important;
+}
+
+.fn-exclude-folder-list.setting-item {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
+
+.fn-exclude-folder-list .setting-item-control {
+  display: flex;
+  justify-content: flex-start !important;
+}
+
+.fn-exclude-folder-list .setting-item-info {
+  display: none !important;
+}
+
+.fn-exclude-folder-list .search-input-container {
+  width: 100%;
+}
+
+/* Whitelist Folder Input (Desktop & Mobile) */
+.fn-whitelist-folder-input-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+
+  input {
+    flex-grow: 1;
+    width: auto;
+    margin-right: 8px;
+    height: 40px;
+    box-sizing: border-box;
+  }
+}
+
+.fn-whitelist-folder-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+@include mobile-override {
+  .fn-whitelist-folder-input-container {
+    display: block;
+    width: 100%;
+    text-align: center;
+
+    input {
+      width: 100%;
+      margin-right: 0;
+    }
+  }
+
+  .fn-whitelist-folder-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+  }
+
+  .is-phone .fn-overview-folder-path .setting-item-control {
+    display: block;
+  }
+}

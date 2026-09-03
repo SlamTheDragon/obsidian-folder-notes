@@ -1,0 +1,18 @@
+// Responsive & Utility Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@mixin mobile-override {
+  @media (max-width: 768px) {
+    @content;
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { DEFAULT_SETTINGS, type FolderNotesSettings } from '../src/settings/SettingsTab';
+import { DEFAULT_SETTINGS, type FolderNotesSettings } from '../src/backend/types/settings';
 
 describe('Folder Notes Settings & Defaults', () => {
   it('contains expected default settings configuration', () => {

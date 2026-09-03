@@ -1,0 +1,74 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// Folder Overview Styles
+.folder-overview-container.fv-remove-edit-button .folder-overview-edit-button {
+  display: none;
+}
+
+.cm-line:has(.fv-link-list-item),
+li:has(.fv-link-list-item),
+.el-ul:has(.fv-link-list-item),
+.cm-line:has(.fv-link-list-start),
+.cm-line:has(.fv-link-list-end),
+.fv-hide-overview {
+  display: none !important;
+}
+
+.folder-overview-list {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 1.2 !important;
+  padding-top: 1.2 !important;
+
+  &::marker {
+    color: $text-faint;
+  }
+}
+
+.folder-overview-list-item {
+  display: flex;
+}
+
+.folder-list::marker {
+  color: $text-normal !important;
+}
+
+.folder-overview-grid {
+  display: grid;
+  grid-gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.folder-overview-grid-item {
+  flex: 1 1 auto;
+  margin: 0 1.2rem 1.2rem 0;
+}
+
+.folder-overview-grid-item-article {
+  article {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 15px;
+    flex: 1;
+  }
+
+  a {
+    text-decoration: none !important;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+  }
+}
+
+.overview-setting-item-fv {
+  border-top: 1px solid $background-modifier-border;
+  padding: 0.75em 0;
+  align-items: center;
+
+  .setting-item {
+    padding: 0;
+  }
+}

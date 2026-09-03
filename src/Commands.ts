@@ -13,24 +13,26 @@ import {
 import type FolderNotesPlugin from './main';
 import {
 	getFolderNote,
+	extractFolderName,
+} from './backend/core/FolderNoteResolver';
+import {
 	createFolderNote,
 	deleteFolderNote,
 	turnIntoFolderNote,
 	openFolderNote,
-	extractFolderName,
 	detachFolderNote,
-} from './functions/folderNoteFunctions';
-import { ExcludedFolder } from './ExcludeFolders/ExcludeFolder';
-import { getFolderPathFromString, getFileExplorerActiveFolder } from './functions/utils';
+} from './backend/core/FolderNoteService';
+import { ExcludedFolder } from './backend/types/exclude';
+import { getFolderPathFromString, getFileExplorerActiveFolder } from './backend/utils/pathUtils';
 import {
 	deleteExcludedFolder,
 	getDetachedFolder,
 	getExcludedFolder,
-} from './ExcludeFolders/functions/folderFunctions';
+} from './backend/core/ExcludeService';
 import {
 	hideFolderNoteInFileExplorer,
 	showFolderNoteInFileExplorer,
-} from './functions/styleFunctions';
+} from './backend/utils/domUtils';
 
 type MarkdownEditorContext = MarkdownView | MarkdownFileInfo;
 

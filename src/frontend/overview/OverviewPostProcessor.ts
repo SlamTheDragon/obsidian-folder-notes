@@ -16,7 +16,6 @@ import {
 	parseOverviewTitle,
 	resolveSourceFolder,
 } from '../../backend/overview/overviewUtils';
-import { updateLinkList, removeLinkList } from '../../backend/overview/LinkListService';
 import { getFolder } from '../../backend/core/FolderNoteResolver';
 import { ListOverviewRenderer } from './renderers/ListOverviewRenderer';
 import { CardsOverviewRenderer } from './renderers/CardsOverviewRenderer';
@@ -120,7 +119,6 @@ export class FolderOverviewComponent {
 		}
 
 		await this.renderOverviewStyle(this.root);
-		this.handleLinkList();
 		this.addEditButton(this.root);
 	}
 
@@ -254,25 +252,6 @@ export class FolderOverviewComponent {
 			);
 			this.activeRenderer = renderer;
 			await renderer.render();
-		}
-	}
-
-	private handleLinkList(): void {
-		if (this.yaml.useActualLinks) {
-			setTimeout(() => {
-				if (this.sourceFile instanceof TFile && this.sourceFolder) {
-					const files = (this.sourceFolder.path === '/' || this.sourceFolder.isRoot?.())
-						? this.plugin.app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
-						: this.sourceFolder.children;
-					void updateLinkList(
-						files,
-						this.plugin,
-						this.yaml,
-						this.pathBlacklist,
-						this.sourceFile,
-					);
-				}
-			}, this.LINK_LIST_UPDATE_DELAY_MS);
 		}
 	}
 

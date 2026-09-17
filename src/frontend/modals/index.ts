@@ -13,3 +13,5 @@ export * from './WhitelistFolderModal';
 export * from './WhitelistPatternModal';
 export * from './WhitelistedFoldersModal';
 export * from './UserFindingModal';
+export * from './FolderOverviewModal';
+export * from './TamperedOverviewModal';

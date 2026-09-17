@@ -178,9 +178,11 @@ describe('Title Interpolation & Code Block Parsing', () => {
 		expect(rebuiltCallout).toContain('> ```folder-overview\n> id: abc\n> ```');
 
 		const linkListStandard = buildLinkListBlock('test-id', false);
-		expect(linkListStandard).toContain('<span class="fv-link-list-start" id="test-id"></span>');
+		expect(linkListStandard).toContain('<!-- folder-overview-start: id="test-id"');
+		expect(linkListStandard).toContain('<!-- folder-overview-end: id="test-id"');
 
 		const linkListCallout = buildLinkListBlock('test-id', true);
-		expect(linkListCallout).toContain('> <span class="fv-link-list-start" id="test-id"></span>');
+		expect(linkListCallout).toContain('> <!-- folder-overview-start: id="test-id"');
+		expect(linkListCallout).toContain('> <!-- folder-overview-end: id="test-id"');
 	});
 });

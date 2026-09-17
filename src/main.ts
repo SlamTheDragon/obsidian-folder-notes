@@ -52,6 +52,7 @@ import { getFileExplorer } from './backend/utils/pathUtils';
 import { FOLDER_OVERVIEW_VIEW, FolderOverviewView } from './frontend/views/FolderOverviewView';
 import { OverviewIndexService } from './backend/overview/OverviewIndexService';
 import { registerOverviewPostProcessor } from './frontend/overview/OverviewPostProcessor';
+import { overviewCommentHiderExtension } from './frontend/editor/OverviewCommentHiderExtension';
 import { Logger } from './backend/utils/Logger';
 
 interface FileExplorerPluginLike extends Plugin {
@@ -358,6 +359,8 @@ export default class FolderNotesPlugin extends Plugin {
 			}
 		}
 
+		this.registerEditorExtension(overviewCommentHiderExtension);
+
 		if (this.settings.fvGlobalSettings.autoUpdateLinks) {
 			void this.overviewIndexService.init(false);
 		}
@@ -421,6 +424,7 @@ export default class FolderNotesPlugin extends Plugin {
 			altKey: evt.altKey,
 			button: evt.button,
 			targetClass: target.className,
+			onlyClickedOnFolderTitle,
 		}, 'handleFileExplorerClick');
 
 		const folderNote = getFolderNote(this, folderPath);
@@ -432,9 +436,21 @@ export default class FolderNotesPlugin extends Plugin {
 		if (!(folderNote instanceof TFile)) return;
 		if (!this.shouldOpenNote(usedCtrl, evt)) return;
 
-		if (!this.settings.enableCollapsing || usedCtrl) {
+		if (usedCtrl) {
 			evt.preventDefault();
 			evt.stopImmediatePropagation();
+		} else if (onlyClickedOnFolderTitle) {
+			// Auto-expand folder when title text is clicked
+			const fileExplorer = getFileExplorer(this);
+			const fileItem = fileExplorer?.view?.fileItems?.[folderPath];
+			if (fileItem?.collapsed) {
+				fileItem.setCollapsed(false);
+			}
+
+			if (!this.settings.enableCollapsing) {
+				evt.preventDefault();
+				evt.stopImmediatePropagation();
+			}
 		}
 
 		void openFolderNote(this, folderNote, evt);
@@ -447,6 +463,7 @@ export default class FolderNotesPlugin extends Plugin {
 	private getFolderTitleInfo(target: HTMLElement): {
 		folderTitleEl: HTMLElement | null;
 		onlyClickedOnFolderTitle: boolean;
+		isIcon: boolean;
 	} {
 		const folderTitleEl = target.closest('.nav-folder-title');
 		const isIcon = !!(target.closest('.collapse-icon') || target.closest('.nav-folder-collapse-indicator') || target.closest('.tree-item-icon'));
@@ -457,6 +474,7 @@ export default class FolderNotesPlugin extends Plugin {
 		return {
 			folderTitleEl: folderTitleEl instanceof HTMLElement ? folderTitleEl : null,
 			onlyClickedOnFolderTitle,
+			isIcon,
 		};
 	}
 
@@ -464,10 +482,12 @@ export default class FolderNotesPlugin extends Plugin {
 		target: HTMLElement,
 		onlyClickedOnFolderTitle: boolean,
 	): boolean {
+		// Zone 1: Direct collapse indicator/icon -> let Obsidian handle tree folding exclusively
 		if (target.closest('.collapse-icon') || target.closest('.nav-folder-collapse-indicator') || target.closest('.tree-item-icon')) {
 			return true;
 		}
-		if (!this.settings.stopWhitespaceCollapsing && !onlyClickedOnFolderTitle) {
+		// Zone 3: Whitespace click when whitespace collapsing is stopped
+		if (this.settings.stopWhitespaceCollapsing && !onlyClickedOnFolderTitle) {
 			return true;
 		}
 		return false;

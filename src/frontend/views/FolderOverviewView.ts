@@ -10,7 +10,7 @@ import type FolderNotesPlugin from '../../main';
 import type { defaultOverviewSettings, includeTypes, OverviewSortBy, OverviewStyle } from '../../backend/types/overview';
 import { FolderSuggest } from '../suggesters/FolderSuggester';
 import { getOverviews } from '../../backend/overview/FolderOverviewLogic';
-import { updateYamlById } from '../../backend/overview/overviewUtils';
+import { updateYamlById, buildLinkListBlock } from '../../backend/overview/overviewUtils';
 import { Logger } from '../../backend/utils/Logger';
 
 export const FOLDER_OVERVIEW_VIEW = 'folder-overview-view';
@@ -28,62 +28,74 @@ const ALL_FILE_TYPES: { key: includeTypes; label: string }[] = [
 
 export class FolderOverviewView extends ItemView {
 	private plugin: FolderNotesPlugin;
-	public activeFile: TFile | null = null;
-	public currentOverviews: defaultOverviewSettings[] = [];
-	public selectedOverviewIndex = 0;
 	public yaml: defaultOverviewSettings;
-	private contentElRef: HTMLElement;
+	public activeFile: TFile | null = null;
+	private currentOverviews: defaultOverviewSettings[] = [];
+	private selectedOverviewIndex = 0;
+	private unregisterVaultListener?: () => void;
 
 	constructor(leaf: WorkspaceLeaf, plugin: FolderNotesPlugin) {
 		super(leaf);
 		this.plugin = plugin;
 		this.yaml = { ...plugin.settings.defaultOverview };
-		this.contentElRef = this.containerEl.children[1] as HTMLElement;
+	}
+
+	getViewType(): string {
+		return FOLDER_OVERVIEW_VIEW;
+	}
+
+	getDisplayText(): string {
+		return 'Folder Overview Settings';
+	}
+
+	getIcon(): string {
+		return 'layout-grid';
+	}
+
+	async onOpen(): Promise<void> {
+		this.activeFile = this.app.workspace.getActiveFile();
+		await this.reloadAndDisplay();
 
 		this.registerEvent(
-			this.plugin.app.workspace.on('file-open', async (file) => {
+			this.app.workspace.on('file-open', async (file) => {
 				this.activeFile = file;
 				await this.reloadAndDisplay();
 			}),
 		);
 
 		this.registerEvent(
-			this.plugin.app.workspace.on('active-leaf-change', async () => {
-				const activeFile = this.plugin.app.workspace.getActiveFile();
-				if (activeFile?.path !== this.activeFile?.path) {
-					this.activeFile = activeFile;
+			this.app.workspace.on('active-leaf-change', async (leaf) => {
+				if (leaf?.view && (leaf.view as any).file) {
+					this.activeFile = (leaf.view as any).file;
+					await this.reloadAndDisplay();
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.vault.on('modify', async (file) => {
+				if (this.activeFile && file.path === this.activeFile.path) {
 					await this.reloadAndDisplay();
 				}
 			}),
 		);
 	}
 
-
-	public getViewType(): string {
-		return FOLDER_OVERVIEW_VIEW;
+	async onClose(): Promise<void> {
+		this.contentEl.empty();
 	}
 
-	public getDisplayText(): string {
-		return 'Folder Overview Settings';
-	}
-
-	public getIcon(): string {
-		return 'settings';
-	}
-
-	public async onOpen(): Promise<void> {
-		this.activeFile = this.plugin.app.workspace.getActiveFile();
-		await this.reloadAndDisplay();
-	}
-
-	public async reloadAndDisplay(): Promise<void> {
-		if (this.activeFile && this.activeFile.extension === 'md') {
+	async reloadAndDisplay(): Promise<void> {
+		if (this.activeFile) {
 			this.currentOverviews = await getOverviews(this.plugin, this.activeFile);
 			if (this.currentOverviews.length > 0) {
 				if (this.selectedOverviewIndex >= this.currentOverviews.length) {
 					this.selectedOverviewIndex = 0;
 				}
-				this.yaml = { ...this.plugin.settings.defaultOverview, ...this.currentOverviews[this.selectedOverviewIndex] };
+				this.yaml = {
+					...this.plugin.settings.defaultOverview,
+					...this.currentOverviews[this.selectedOverviewIndex],
+				};
 			}
 		} else {
 			this.currentOverviews = [];
@@ -92,17 +104,13 @@ export class FolderOverviewView extends ItemView {
 	}
 
 	public display(): void {
-		const contentEl = this.contentElRef || (this.containerEl.children[1] as HTMLElement);
+		const { contentEl } = this;
 		contentEl.empty();
+		contentEl.createEl('h4', { text: 'Folder Overview Settings' });
 
-		contentEl.createEl('h4', {
-			cls: 'fn-folder-overview-header',
-			text: 'Folder Overview Settings',
-		});
-
-		if (!this.activeFile || this.activeFile.extension !== 'md') {
+		if (!this.activeFile) {
 			contentEl.createEl('p', {
-				text: 'No active markdown note opened. Open a note to configure its folder overviews.',
+				text: 'No active markdown note open. Focus a note to configure its folder overview.',
 				cls: 'setting-item-description',
 			});
 			return;
@@ -110,7 +118,7 @@ export class FolderOverviewView extends ItemView {
 
 		if (this.currentOverviews.length === 0) {
 			contentEl.createEl('p', {
-				text: `No folder overview codeblock found in "${this.activeFile.basename}".`,
+				text: `No folder-overview codeblock found in "${this.activeFile.basename}".`,
 				cls: 'setting-item-description',
 			});
 
@@ -128,7 +136,20 @@ export class FolderOverviewView extends ItemView {
 								id: newId,
 								folderPath: this.yaml.folderPath || '',
 							};
-							const block = `\n\`\`\`folder-overview\n${stringifyYaml(initialConfig)}\`\`\`\n`;
+							const { resolveSourceFolder } = await import('../../backend/overview/overviewUtils');
+							const { buildLinkList } = await import('../../backend/overview/LinkListService');
+							const sourceFolder = resolveSourceFolder(this.plugin, initialConfig.folderPath, this.activeFile ?? undefined);
+							const files = sourceFolder
+								? ((sourceFolder.path === '/' || sourceFolder.isRoot?.())
+									? this.plugin.app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
+									: sourceFolder.children)
+								: [];
+
+							const fileLinks = await buildLinkList(files, this.plugin, initialConfig, [], (this.activeFile ?? undefined) as any);
+							const headingPrefix = '#'.repeat(initialConfig.titleSize ?? 2);
+							const titleLine = (initialConfig.showTitle !== false && initialConfig.title) ? `${headingPrefix} ${initialConfig.title}\n` : '';
+
+							const block = `\n<!-- folder-overview-start: id="${newId}" folderPath="${initialConfig.folderPath}" -->\n${titleLine}${fileLinks.join('\n')}\n<!-- folder-overview-end: id="${newId}" -->\n`;
 							await this.plugin.app.vault.append(this.activeFile!, block);
 							Logger.getInstance().logInteraction('FolderOverviewView_InsertBlock', {
 								file: this.activeFile?.path,

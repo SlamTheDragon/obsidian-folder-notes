@@ -32,4 +32,18 @@ describe('File Explorer DOM Classes & Styling Selector Integrity', () => {
 		expect(settingClassMap.underlineFolder).toBe('folder-note-underline');
 		expect(settingClassMap.hideFolderNote).toBe('hide-folder-note');
 	});
+
+	it('verifies typography rules use direct child combinators to prevent style bleeding into child files', async () => {
+		const fs = await import('fs');
+		const path = await import('path');
+		const scssContent = fs.readFileSync(path.join(import.meta.dir, '../src/frontend/styles/_explorer.scss'), 'utf8');
+
+		// Assert bold, underline, and cursive target direct children rather than arbitrary descendants
+		expect(scssContent).toContain('body.folder-note-bold .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner');
+		expect(scssContent).toContain('body.folder-note-underline .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner');
+		expect(scssContent).toContain('body.folder-note-cursive .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner');
+
+		// Assert no un-scoped generic descendant selectors remain that could bleed to child notes
+		expect(scssContent).not.toMatch(/body\.folder-note-bold\s+\.has-folder-note\s+\.tree-item-inner/);
+	});
 });

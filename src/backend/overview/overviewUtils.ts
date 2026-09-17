@@ -126,30 +126,22 @@ export function buildYamlConfig(
 	};
 }
 
-export function buildLinkListBlock(id: string, calloutFlag: boolean): string {
-	if (calloutFlag) {
-		return (
-			'\n> <span class="fv-link-list-start" id="' +
-			id +
-			'"></span>\n> <span class="fv-link-list-end" id="' +
-			id +
-			'"></span>'
-		);
-	}
-
-	return (
-		'\n<span class="fv-link-list-start" id="' +
-		id +
-		'"></span>\n<span class="fv-link-list-end" id="' +
-		id +
-		'"></span>'
-	);
+export function buildLinkListBlock(id: string, calloutFlag: boolean, folderPath = ''): string {
+	const prefix = calloutFlag ? '> ' : '';
+	return `\n${prefix}<!-- folder-overview-start: id="${id}" folderPath="${folderPath}" -->\n${prefix}<!-- folder-overview-end: id="${id}" -->\n`;
 }
 
-export function getYamlBlocks(text: string, callout: boolean): RegExpMatchArray | null {
-	return callout
-		? text.match(/^>\s*```folder-overview\r?\n([\s\S]*?)```/gm)
-		: text.match(/^(?!>).*```folder-overview\r?\n(?:^(?!>).*[\r\n]*)*?^```$/gm);
+export function getYamlBlocks(text: string, callout: boolean): string[] | null {
+	const blocks: string[] = [];
+	const regex = /(?:^|\n)(>?\s*)```folder-overview\r?\n([\s\S]*?)\r?\n\1```/g;
+	let match: RegExpExecArray | null;
+	while ((match = regex.exec(text)) !== null) {
+		const isCalloutBlock = match[1].includes('>');
+		if (isCalloutBlock === callout) {
+			blocks.push(match[0].trim());
+		}
+	}
+	return blocks.length > 0 ? blocks : null;
 }
 
 export function cleanYamlBlock(block: string, callout: boolean): string {
@@ -199,7 +191,10 @@ export async function updateYamlById(
 
 				let newBlock = buildNewBlock(stringYaml, isCallout);
 
-				const hasExistingLinkList = updatedText.includes(`class="fv-link-list-start" id="${newYaml.id}"`);
+				const hasExistingLinkList =
+					(updatedText.includes('class="fv-link-list"') && updatedText.includes(newYaml.id)) ||
+					(updatedText.includes('class="fv-link-list-start"') && updatedText.includes(newYaml.id));
+
 				if (addLinkList && !hasExistingLinkList) {
 					newBlock += buildLinkListBlock(newYaml.id, isCallout);
 				}

@@ -252,6 +252,10 @@ function handleFileMove(file: TFile, oldPath: string, plugin: FolderNotesPlugin)
 }
 
 function handleFileRename(file: TFile, oldPath: string, plugin: FolderNotesPlugin): void {
+	// Always strip is-folder-note class using both oldPath and new path
+	removeCSSClassFromFileExplorerEL(oldPath, 'is-folder-note', false, plugin);
+	removeCSSClassFromFileExplorerEL(file.path, 'is-folder-note', false, plugin);
+
 	const oldFile = {
 		name: getFileNameFromPathString(oldPath),
 		path: oldPath,
@@ -259,29 +263,56 @@ function handleFileRename(file: TFile, oldPath: string, plugin: FolderNotesPlugi
 		extension: getFileNameFromPathString(oldPath).split('.').pop() || '',
 	};
 
-	let oldFolder = getFolderNoteFolder(plugin, oldFile.path, oldFile.name);
-	if (oldFolder instanceof TFile) {
-		oldFolder = oldFolder.parent;
+	let folder: TFolder | null = null;
+	if (file.parent instanceof TFolder) {
+		folder = file.parent;
+	} else {
+		const oldFolder = getFolderNoteFolder(plugin, oldFile.path, oldFile.name);
+		if (oldFolder instanceof TFolder) {
+			folder = oldFolder;
+		}
 	}
-	if (!oldFolder) { return; }
 
-	const folder = plugin.app.vault.getAbstractFileByPath(oldFolder.path);
-	if (!(folder instanceof TFolder)) { return; }
+	if (!folder) return;
 
-	let folderNote = getFolderNote(plugin, folder.path, undefined, file);
-	if (!folderNote) {
-		folderNote = getFolderNote(plugin, folder.path);
-	}
 	const excludedFolder = getExcludedFolder(plugin, folder.path);
-	if (excludedFolder?.detached) { return; }
-
 	const newFolderName = extractFolderName(plugin.settings.folderNoteName, file.basename);
+	const matchesCurrentFolderTemplate = newFolderName === folder.name;
+
+	if (excludedFolder?.detached) {
+		if (matchesCurrentFolderTemplate) {
+			// User renamed a note to match the folder note template; re-attach cleanly
+			deleteExcludedFolder(plugin, excludedFolder);
+			markFileAsFolderNote(file, plugin);
+			markFolderWithFolderNoteClasses(folder, plugin);
+			void updateCSSClassesForFolder(folder.path, plugin);
+			Logger.getInstance().log('INFO', 'VAULT_SYNC', 'Reconnected detached folder note on matching rename', {
+				filePath: file.path,
+				folder: folder.path,
+			}, 'handleFileRename');
+		} else {
+			// Detached note renamed away; ensure it is unhidden
+			unmarkFileAsFolderNote(file, plugin);
+			removeCSSClassFromFileExplorerEL(oldPath, 'is-folder-note', false, plugin);
+			removeCSSClassFromFileExplorerEL(file.path, 'is-folder-note', false, plugin);
+			void updateCSSClassesForFolder(folder.path, plugin);
+		}
+		return;
+	}
 
 	if (plugin.settings.syncFolderName && !excludedFolder?.disableSync && newFolderName && newFolderName !== folder.name) {
 		renameFolder(plugin, file, folder, oldFile);
 	} else {
-		unmarkFileAsFolderNote(file, plugin);
-		void updateCSSClassesForFolder(folder.path, plugin);
+		const currentFolderNote = getFolderNote(plugin, folder.path);
+		if (currentFolderNote && currentFolderNote.path === file.path) {
+			markFileAsFolderNote(file, plugin);
+			markFolderWithFolderNoteClasses(folder, plugin);
+		} else {
+			unmarkFileAsFolderNote(file, plugin);
+			removeCSSClassFromFileExplorerEL(oldPath, 'is-folder-note', false, plugin);
+			void updateCSSClassesForFolder(folder.path, plugin);
+		}
+
 		Logger.getInstance().log('INFO', 'VAULT_SYNC', 'Note file renamed; updated folder styling', {
 			oldPath,
 			newPath: file.path,

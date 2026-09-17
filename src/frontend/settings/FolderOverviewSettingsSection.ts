@@ -167,6 +167,68 @@ export async function renderFolderOverview(settingsTab: SettingsTab): Promise<vo
 		);
 
 	new Setting(containerEl)
+		.setName('Only include subfolders')
+		.setDesc('Only display contents of immediate subfolders')
+		.addToggle((toggle) =>
+			toggle.setValue(overview.onlyIncludeSubfolders).onChange(async (value) => {
+				overview.onlyIncludeSubfolders = value;
+				await plugin.saveSettings();
+			}),
+		);
+
+	new Setting(containerEl)
+		.setName('Disable collapse icon')
+		.setDesc('Hide the collapse icon next to folders in list/explorer views')
+		.addToggle((toggle) =>
+			toggle.setValue(overview.disableCollapseIcon).onChange(async (value) => {
+				overview.disableCollapseIcon = value;
+				await plugin.saveSettings();
+			}),
+		);
+
+	new Setting(containerEl)
+		.setName('Always collapse folders')
+		.setDesc('Default folders to collapsed state on initial load')
+		.addToggle((toggle) =>
+			toggle.setValue(overview.alwaysCollapse).onChange(async (value) => {
+				overview.alwaysCollapse = value;
+				await plugin.saveSettings();
+			}),
+		);
+
+	containerEl.createEl('h4', { text: 'Included File Types' });
+	const ALL_FILE_TYPES: { key: any; label: string }[] = [
+		{ key: 'folder', label: 'Folders' },
+		{ key: 'markdown', label: 'Markdown Notes (.md)' },
+		{ key: 'canvas', label: 'Canvas (.canvas)' },
+		{ key: 'pdf', label: 'PDF Documents (.pdf)' },
+		{ key: 'image', label: 'Images (jpg, png, gif, svg, webp)' },
+		{ key: 'audio', label: 'Audio files (mp3, wav, m4a, etc.)' },
+		{ key: 'video', label: 'Video files (mp4, webm, mov, etc.)' },
+		{ key: 'other', label: 'Other file extensions' },
+	];
+
+	for (const fileType of ALL_FILE_TYPES) {
+		new Setting(containerEl)
+			.setName(fileType.label)
+			.addToggle((toggle) => {
+				const isIncluded = (overview.includeTypes || []).includes(fileType.key);
+				toggle.setValue(isIncluded).onChange(async (value) => {
+					let currentTypes = [...(overview.includeTypes || [])];
+					if (value && !currentTypes.includes(fileType.key)) {
+						currentTypes.push(fileType.key);
+					} else if (!value && currentTypes.includes(fileType.key)) {
+						currentTypes = currentTypes.filter((t) => t !== fileType.key);
+					}
+					overview.includeTypes = currentTypes;
+					await plugin.saveSettings();
+				});
+			});
+	}
+
+	containerEl.createEl('h4', { text: 'Graph View & Markdown Links' });
+
+	new Setting(containerEl)
 		.setName('Use actual markdown links')
 		.setDesc('Inject real markdown wikilinks into notes so they appear in native Obsidian Graph View')
 		.addToggle((toggle) =>
@@ -182,6 +244,16 @@ export async function renderFolderOverview(settingsTab: SettingsTab): Promise<vo
 		.addToggle((toggle) =>
 			toggle.setValue(overview.hideLinkList).onChange(async (value) => {
 				overview.hideLinkList = value;
+				await plugin.saveSettings();
+			}),
+		);
+
+	new Setting(containerEl)
+		.setName('Use wikilinks format')
+		.setDesc('Use [[filename]] wikilinks syntax instead of [filename](path) markdown links')
+		.addToggle((toggle) =>
+			toggle.setValue(overview.useWikilinks).onChange(async (value) => {
+				overview.useWikilinks = value;
 				await plugin.saveSettings();
 			}),
 		);

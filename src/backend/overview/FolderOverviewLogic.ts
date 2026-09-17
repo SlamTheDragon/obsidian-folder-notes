@@ -171,8 +171,8 @@ export function isFileTypeIncluded(
 	return false;
 }
 
-export function isFileInSubfolder(sourceFolderPath: string, folderPath: string): boolean {
-	if (sourceFolderPath === '/' || sourceFolderPath === '') return true;
+export function isFileInSubfolder(sourceFolderPath: string | undefined, folderPath: string): boolean {
+	if (!sourceFolderPath || sourceFolderPath === '/' || sourceFolderPath === '') return true;
 	if (folderPath === sourceFolderPath) return true;
 	const prefix = sourceFolderPath.endsWith('/') ? sourceFolderPath : `${sourceFolderPath}/`;
 	return folderPath.startsWith(prefix);
@@ -204,8 +204,8 @@ export function shouldExcludeFile(
 	);
 }
 
-export function getFileDepth(filePath: string, sourceFolderPath: string): number {
-	const normalizedSource = sourceFolderPath === '/' || sourceFolderPath === '' ? '' : sourceFolderPath;
+export function getFileDepth(filePath: string, sourceFolderPath: string | undefined): number {
+	const normalizedSource = !sourceFolderPath || sourceFolderPath === '/' || sourceFolderPath === '' ? '' : sourceFolderPath;
 	const sourceSegments = normalizedSource ? normalizedSource.split('/').length : 0;
 	const fileSegments = filePath.split('/').length;
 	return fileSegments - sourceSegments;
@@ -248,30 +248,52 @@ export async function getOverviews(
 	const content = await plugin.app.vault.read(file);
 	if (!content) return overviews;
 
-	const calloutYamlBlocks = content.match(/^>\s*```folder-overview\r?\n([\s\S]*?)```/gm);
-	if (calloutYamlBlocks) {
-		for (const block of calloutYamlBlocks) {
-			const cleanedBlock = block
-				.replace(/^>\s*```folder-overview\r?\n/, '')
-				.replace(/```$/, '')
-				.replace(/^>\s?/gm, '');
-			const yaml = parseYaml(cleanedBlock);
-			if (yaml) {
-				yaml.isInCallout = true;
-				overviews.push(yaml);
-			}
+	// 1. Parse pure Markdown comment tags: <!-- folder-overview-start ... -->
+	const commentRegex = /<!--\s*folder-overview-start(?::|\s+)([\s\S]*?)-->/g;
+	let match: RegExpExecArray | null;
+	const detectedIds = new Set<string>();
+
+	while ((match = commentRegex.exec(content)) !== null) {
+		const rawAttr = match[1].trim();
+		const overview: Partial<defaultOverviewSettings> = {
+			...plugin.settings.defaultOverview,
+		};
+		// Match key="val with spaces" or key='val' or key=val
+		const attrRegex = /([a-zA-Z0-9_]+)=(?:["']([^"']*)["']|([^\s>]+))/g;
+		let attrMatch: RegExpExecArray | null;
+		while ((attrMatch = attrRegex.exec(rawAttr)) !== null) {
+			const key = attrMatch[1];
+			let val: any = attrMatch[2] !== undefined ? attrMatch[2] : attrMatch[3];
+			if (val === 'true') val = true;
+			else if (val === 'false') val = false;
+			else if (!isNaN(Number(val)) && val !== '') val = Number(val);
+			(overview as any)[key] = val;
+		}
+		if (overview.id) {
+			detectedIds.add(overview.id);
+			overviews.push(overview as defaultOverviewSettings);
 		}
 	}
 
-	const regularYamlBlocks = content.match(/^(?!>).*```folder-overview\r?\n(?:^(?!>).*[\r\n]*)*?^```$/gm);
-	if (regularYamlBlocks) {
-		for (const block of regularYamlBlocks) {
-			const cleanedBlock = block.replace(/^```folder-overview\r?\n/, '').replace(/```$/, '');
-			const yaml = parseYaml(cleanedBlock);
-			if (yaml) {
-				yaml.isInCallout = false;
-				overviews.push(yaml);
+	// 2. Parse legacy codeblocks: ```folder-overview ... ```
+	const codeblockRegex = /(?:^|\n)(>?\s*)```folder-overview\r?\n([\s\S]*?)\r?\n\1```/g;
+	while ((match = codeblockRegex.exec(content)) !== null) {
+		const prefix = match[1];
+		const yamlBody = match[2];
+		const isInCallout = prefix.includes('>');
+		const cleanedYaml = isInCallout
+			? yamlBody.replace(/^>\s?/gm, '')
+			: yamlBody;
+		try {
+			const yaml = parseYaml(cleanedYaml);
+			if (yaml && typeof yaml === 'object') {
+				yaml.isInCallout = isInCallout;
+				if (!detectedIds.has(yaml.id)) {
+					overviews.push(yaml);
+				}
 			}
+		} catch (e) {
+			console.error('Failed to parse folder-overview YAML:', e);
 		}
 	}
 
@@ -284,8 +306,7 @@ export async function hasOverviewYaml(
 ): Promise<boolean> {
 	const content = await plugin.app.vault.read(file);
 	if (!content) return false;
-	const yamlBlocks = content.match(/```folder-overview\r?\n([\s\S]*?)```/g);
-	return !!yamlBlocks;
+	return /```folder-overview/g.test(content) || /<!--\s*folder-overview-start/g.test(content);
 }
 
 export async function updateYaml(

@@ -379,8 +379,34 @@ export async function openFolderNote(
 		plugin.app.workspace.setActiveLeaf(foundLeaf, { focus: true });
 	} else {
 		const shouldOpenInNewTab = Keymap.isModEvent(evt) || plugin.settings.openInNewTab;
-		const leaf = plugin.app.workspace.getLeaf(shouldOpenInNewTab);
-		if (file instanceof TFile) {
+		let leaf: WorkspaceLeaf | null = null;
+		const activeLeaf = plugin.app.workspace.activeLeaf;
+		const isSidebarLeaf = !activeLeaf || (
+			activeLeaf.getRoot() === (plugin.app.workspace as any).rightSplit ||
+			activeLeaf.getRoot() === (plugin.app.workspace as any).leftSplit
+		);
+
+		if (isSidebarLeaf) {
+			// Never overwrite side panels with note markdown views
+			leaf = plugin.app.workspace.getMostRecentLeaf(plugin.app.workspace.rootSplit) ?? plugin.app.workspace.getLeaf(shouldOpenInNewTab ? 'tab' : false);
+		} else {
+			leaf = plugin.app.workspace.getLeaf(shouldOpenInNewTab ? 'tab' : false);
+		}
+
+		// Final safeguard: if leaf is still inside a sidebar split, redirect to rootSplit
+		if (
+			leaf && (
+				leaf.getRoot() === (plugin.app.workspace as any).rightSplit ||
+				leaf.getRoot() === (plugin.app.workspace as any).leftSplit
+			)
+		) {
+			const rootLeaf = plugin.app.workspace.getMostRecentLeaf(plugin.app.workspace.rootSplit);
+			if (rootLeaf) {
+				leaf = rootLeaf;
+			}
+		}
+
+		if (file instanceof TFile && leaf) {
 			await leaf.openFile(file);
 		}
 	}

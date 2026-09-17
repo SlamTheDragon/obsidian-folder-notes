@@ -12,13 +12,13 @@ body:not(.disable-folder-highlight) .nav-folder.fn-is-active > .tree-item-self {
   font-weight: $nav-item-weight-active;
 }
 
-body.folder-note-underline .has-folder-note .nav-folder-title-content,
-body.folder-note-underline .has-folder-note .tree-item-inner,
-body.folder-note-underline .nav-folder.has-folder-note .nav-folder-title-content,
-body.folder-note-underline .nav-folder-title.has-folder-note,
-.folder-note-underline .has-folder-note .nav-folder-title-content,
-.folder-note-underline .nav-folder.has-folder-note .nav-folder-title-content,
-.folder-note-underline .nav-folder-title.has-folder-note .nav-folder-title-content {
+body.folder-note-underline .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+body.folder-note-underline .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner,
+body.folder-note-underline .nav-folder.has-folder-note > .tree-item-self > .tree-item-inner,
+body.folder-note-underline .nav-folder-title.has-folder-note > .nav-folder-title-content,
+body.folder-note-underline .nav-folder-title.has-folder-note > .tree-item-inner,
+.folder-note-underline .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+.folder-note-underline .nav-folder-title.has-folder-note > .nav-folder-title-content {
   text-decoration-line: underline !important;
   text-decoration-color: $text-faint !important;
   text-decoration-thickness: 2px !important;
@@ -33,25 +33,24 @@ body.folder-note-underline-path .has-folder-note.view-header-breadcrumb,
   text-underline-offset: 2px !important;
 }
 
-body.folder-note-bold .has-folder-note .nav-folder-title-content,
-body.folder-note-bold .has-folder-note .tree-item-inner,
-body.folder-note-bold .nav-folder.has-folder-note .nav-folder-title-content,
-body.folder-note-bold .nav-folder-title.has-folder-note,
-body.folder-note-bold .nav-folder-title.has-folder-note .tree-item-inner,
-.folder-note-bold .has-folder-note .nav-folder-title-content,
-.folder-note-bold .nav-folder.has-folder-note .nav-folder-title-content,
-.folder-note-bold .nav-folder-title.has-folder-note .nav-folder-title-content,
+body.folder-note-bold .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+body.folder-note-bold .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner,
+body.folder-note-bold .nav-folder.has-folder-note > .tree-item-self > .tree-item-inner,
+body.folder-note-bold .nav-folder-title.has-folder-note > .nav-folder-title-content,
+body.folder-note-bold .nav-folder-title.has-folder-note > .tree-item-inner,
+.folder-note-bold .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+.folder-note-bold .nav-folder-title.has-folder-note > .nav-folder-title-content,
 .folder-note-bold-path .has-folder-note.view-header-breadcrumb {
   font-weight: bold !important;
 }
 
-body.folder-note-cursive .has-folder-note .nav-folder-title-content,
-body.folder-note-cursive .has-folder-note .tree-item-inner,
-body.folder-note-cursive .nav-folder.has-folder-note .nav-folder-title-content,
-body.folder-note-cursive .nav-folder-title.has-folder-note,
-.folder-note-cursive .has-folder-note .nav-folder-title-content,
-.folder-note-cursive .nav-folder.has-folder-note .nav-folder-title-content,
-.folder-note-cursive .nav-folder-title.has-folder-note .nav-folder-title-content,
+body.folder-note-cursive .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+body.folder-note-cursive .nav-folder.has-folder-note > .nav-folder-title > .tree-item-inner,
+body.folder-note-cursive .nav-folder.has-folder-note > .tree-item-self > .tree-item-inner,
+body.folder-note-cursive .nav-folder-title.has-folder-note > .nav-folder-title-content,
+body.folder-note-cursive .nav-folder-title.has-folder-note > .tree-item-inner,
+.folder-note-cursive .nav-folder.has-folder-note > .nav-folder-title > .nav-folder-title-content,
+.folder-note-cursive .nav-folder-title.has-folder-note > .nav-folder-title-content,
 .folder-note-cursive-path .has-folder-note.view-header-breadcrumb {
   font-style: italic !important;
 }

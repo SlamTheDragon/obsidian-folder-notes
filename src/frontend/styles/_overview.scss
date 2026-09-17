@@ -11,8 +11,18 @@ li:has(.fv-link-list-item),
 .el-ul:has(.fv-link-list-item),
 .cm-line:has(.fv-link-list-start),
 .cm-line:has(.fv-link-list-end),
-.fv-hide-overview {
+.fv-link-list,
+.cm-line:has(.fv-link-list),
+div.fv-link-list,
+.fv-hide-overview,
+.fn-overview-comment-line,
+.cm-line.fn-overview-comment-line {
   display: none !important;
+  height: 0 !important;
+  line-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
 }
 
 .folder-overview-list {

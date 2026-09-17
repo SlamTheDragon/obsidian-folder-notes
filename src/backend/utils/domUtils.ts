@@ -40,6 +40,8 @@ export async function updateCSSClassesForFolder(
 
 	if (folder.children.length === 0) {
 		addCSSClassToFileExplorerEl(folder.path, 'fn-empty-folder', false, plugin);
+	} else {
+		removeCSSClassFromFileExplorerEL(folder.path, 'fn-empty-folder', false, plugin);
 	}
 
 	if (!folderNote || detachedFolderNote) {
@@ -160,18 +162,18 @@ export async function addCSSClassToFileExplorerEl(
 
 	if (parent) {
 		const parentElement = fileExplorerItem?.parentElement;
-		if (parentElement) {
+		if (parentElement && (parentElement.classList.contains('nav-folder') || parentElement.classList.contains('nav-file'))) {
 			parentElement.addClass(cssClass);
 		}
 	} else {
 		fileExplorerItem.addClass(cssClass);
-		// Also decorate parent container element (.nav-file or .nav-folder) for comprehensive CSS matching
-		if (fileExplorerItem.parentElement) {
+		// Also decorate parent item container (.nav-file or .nav-folder) for strict CSS matching
+		if (fileExplorerItem.parentElement && (fileExplorerItem.parentElement.classList.contains('nav-folder') || fileExplorerItem.parentElement.classList.contains('nav-file'))) {
 			fileExplorerItem.parentElement.addClass(cssClass);
 		}
 		activeDocument.querySelectorAll(`[data-path='${CSS.escape(path)}']`).forEach((item) => {
 			item.addClass(cssClass);
-			if (item.parentElement) {
+			if (item.parentElement && (item.parentElement.classList.contains('nav-folder') || item.parentElement.classList.contains('nav-file'))) {
 				item.parentElement.addClass(cssClass);
 			}
 		});
@@ -194,20 +196,20 @@ export function removeCSSClassFromFileExplorerEL(
 
 	activeDocument.querySelectorAll(`[data-path='${CSS.escape(path)}']`).forEach((item) => {
 		item.removeClass(cssClass);
-		if (item.parentElement) {
+		if (item.parentElement && (item.parentElement.classList.contains('nav-folder') || item.parentElement.classList.contains('nav-file'))) {
 			item.parentElement.removeClass(cssClass);
 		}
 	});
 	if (!fileExplorerItem) { return; }
 	if (parent) {
 		const parentElement = fileExplorerItem?.parentElement;
-		if (parentElement) {
+		if (parentElement && (parentElement.classList.contains('nav-folder') || parentElement.classList.contains('nav-file'))) {
 			parentElement.removeClass(cssClass);
 		}
 		return;
 	}
 	fileExplorerItem.removeClass(cssClass);
-	if (fileExplorerItem.parentElement) {
+	if (fileExplorerItem.parentElement && (fileExplorerItem.parentElement.classList.contains('nav-folder') || fileExplorerItem.parentElement.classList.contains('nav-file'))) {
 		fileExplorerItem.parentElement.removeClass(cssClass);
 	}
 }

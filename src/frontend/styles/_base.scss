@@ -21,9 +21,15 @@ body.hide-folder-note .nav-file-title.is-folder-note,
 }
 
 .pointer-cursor,
+.has-folder-note.nav-folder-title:hover,
+.nav-folder.has-folder-note > .nav-folder-title:hover,
+.nav-folder.has-folder-note > .tree-item-self:hover,
 .has-folder-note .nav-folder-title-content:hover,
+.has-folder-note .tree-item-inner:hover,
 .has-folder-note.view-header-breadcrumb:hover,
 .nav-folder-collapse-indicator:hover,
+.collapse-icon:hover,
+.tree-item-icon:hover,
 .fn-delete-confirmation-modal-buttons span:hover,
 .fn-delete-confirmation-modal-buttons input:hover {
   cursor: pointer !important;

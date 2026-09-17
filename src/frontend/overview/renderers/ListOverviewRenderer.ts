@@ -33,7 +33,7 @@ export class ListOverviewRenderer {
 		this.ctx = ctx;
 		this.root = root;
 		this.yaml = yaml;
-		this.pathBlacklist = pathBlacklist;
+		this.pathBlacklist = [...pathBlacklist];
 		this.overview = overview;
 
 		const DEBOUNCE_DELAY_MS = 300;
@@ -44,6 +44,7 @@ export class ListOverviewRenderer {
 
 	public async render(): Promise<void> {
 		this.cleanup();
+		this.pathBlacklist = [];
 
 		const overviewList = this.overview.listEl;
 		if (!overviewList) return;

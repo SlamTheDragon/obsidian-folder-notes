@@ -146,35 +146,38 @@ export class Commands {
 		);
 	}
 
-	insertOverview(editor: Editor): void {
+	async insertOverview(editor: Editor): Promise<void> {
 		const { line: cursorLine } = editor.getCursor();
 		const currentLineText = editor.getLine(cursorLine);
+		const activeFile = this.plugin.app.workspace.getActiveFile();
 
 		const overviewConfig = { ...this.plugin.settings.defaultOverview, id: crypto.randomUUID() };
-		const yaml = stringifyYaml(overviewConfig);
-		let overviewBlock = `\`\`\`folder-overview\n${yaml}\`\`\`\n`;
+		const { resolveSourceFolder } = await import('./backend/overview/overviewUtils');
+		const { buildLinkList } = await import('./backend/overview/LinkListService');
+		const sourceFolder = resolveSourceFolder(this.plugin, overviewConfig.folderPath, activeFile ?? undefined);
+		const files = sourceFolder
+			? ((sourceFolder.path === '/' || sourceFolder.isRoot?.())
+				? this.plugin.app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
+				: sourceFolder.children)
+			: [];
 
-		if (overviewConfig.useActualLinks) {
-			overviewBlock +=
-				`<span class="fv-link-list-start" id="${overviewConfig.id}"></span>\n` +
-				`<span class="fv-link-list-end" id="${overviewConfig.id}"></span>\n`;
-		}
+		const isCallout = currentLineText.trim() === '>';
+		overviewConfig.isInCallout = isCallout;
+		const fileLinks = await buildLinkList(files, this.plugin, overviewConfig, [], (activeFile ?? undefined) as any);
 
-		if (currentLineText.trim() === '') {
-			editor.replaceSelection(overviewBlock);
-		} else if (currentLineText.trim() === '>') {
-			const yamlLines = yaml.split(/\r?\n/);
-			const quotedLines = yamlLines.map((yamlLine) => `> ${yamlLine}`);
-			let quotedBlock = `> \`\`\`folder-overview\n${quotedLines.join('\n')}\n> \`\`\`\n`;
-			if (overviewConfig.useActualLinks) {
-				quotedBlock +=
-					`> <span class="fv-link-list-start" id="${overviewConfig.id}"></span>\n` +
-					`> <span class="fv-link-list-end" id="${overviewConfig.id}"></span>\n`;
-			}
-			editor.replaceSelection(quotedBlock);
-		}
+		const prefix = isCallout ? '> ' : '';
+		const headingPrefix = '#'.repeat(overviewConfig.titleSize ?? 2);
+		const titleLine = (overviewConfig.showTitle !== false && overviewConfig.title) ? `${prefix}${headingPrefix} ${overviewConfig.title}` : '';
 
-		const activeFile = this.plugin.app.workspace.getActiveFile();
+		const blockLines = [
+			`${prefix}<!-- folder-overview-start: id="${overviewConfig.id}" folderPath="${overviewConfig.folderPath ?? ''}" -->`,
+			...(titleLine ? [titleLine] : []),
+			...fileLinks,
+			`${prefix}<!-- folder-overview-end: id="${overviewConfig.id}" -->`,
+		];
+
+		editor.replaceSelection(blockLines.join('\n') + '\n');
+
 		if (activeFile) {
 			this.plugin.overviewIndexService?.addNote(activeFile);
 		}

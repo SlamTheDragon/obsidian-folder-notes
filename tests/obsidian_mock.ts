@@ -190,7 +190,27 @@ mock.module('obsidian', () => ({
   debounce: (fn: any, ms: number) => fn,
   requireApiVersion: () => true,
   setIcon: (el: any, iconId: string) => {},
-  parseYaml: (s: string) => ({}),
+  parseYaml: (s: string) => {
+    const obj: any = {};
+    if (!s) return obj;
+    for (const line of s.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx !== -1) {
+        const key = trimmed.slice(0, colonIdx).trim();
+        let val = trimmed.slice(colonIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (val === 'true') obj[key] = true;
+        else if (val === 'false') obj[key] = false;
+        else if (!isNaN(Number(val)) && val !== '') obj[key] = Number(val);
+        else obj[key] = val;
+      }
+    }
+    return obj;
+  },
   stringifyYaml: (o: any) => '',
   getAllTags: () => [],
   getFrontMatterInfo: () => ({ exists: false, frontmatter: '' }),

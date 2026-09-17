@@ -314,6 +314,74 @@ export async function renderGeneral(settingsTab: SettingsTab): Promise<void> {
 					new CreateFnForEveryFolderModal(settingsTab.app, settingsTab.plugin).open();
 				}),
 		);
+
+	// Diagnostics & Telemetry Section
+	const diagnostics = containerEl.createEl('details', { cls: 'fn-advanced-settings' });
+	diagnostics.createEl('summary', { text: 'Diagnostics, Telemetry & Logging' });
+
+	new Setting(diagnostics)
+		.setName('Enable verbose diagnostic logging')
+		.setDesc('Write detailed timestamps, execution traces, DOM operations, and user interactions to .obsidian/plugins/folder-notes/debug.log.')
+		.addToggle((toggle) =>
+			toggle
+				.setValue(settingsTab.plugin.settings.enableVerboseLogging !== false)
+				.onChange(async (value) => {
+					settingsTab.plugin.settings.enableVerboseLogging = value;
+					await settingsTab.plugin.saveSettings();
+				}),
+		);
+
+	new Setting(diagnostics)
+		.setName('Record user observation / finding')
+		.setDesc('Log a manual observation or issue to correlate with system execution timings.')
+		.addButton((button) =>
+			button
+				.setButtonText('Record Observation')
+				.onClick(() => {
+					const { UserFindingModal } = require('../modals/UserFindingModal');
+					new UserFindingModal(settingsTab.app, settingsTab.plugin).open();
+				}),
+		);
+
+	new Setting(diagnostics)
+		.setName('Run diagnostic self-test suite')
+		.setDesc('Execute non-destructive live action tests in the vault (creates/renames test folders, verifies note sync and DOM classes).')
+		.addButton((button) =>
+			button
+				.setButtonText('Run Self-Test')
+				.setCta()
+				.onClick(async () => {
+					const { DiagnosticRunner } = require('../../backend/diagnostics/DiagnosticRunner');
+					await new DiagnosticRunner(settingsTab.plugin).runSuite();
+				}),
+		);
+
+	new Setting(diagnostics)
+		.setName('Scan vault telemetry & health')
+		.setDesc('Audit all vault folders for orphaned/desynchronized folder notes and missing styling attributes.')
+		.addButton((button) =>
+			button
+				.setButtonText('Scan Health')
+				.onClick(async () => {
+					const { TelemetryScanner } = require('../../backend/diagnostics/TelemetryScanner');
+					await new TelemetryScanner(settingsTab.plugin).scanVaultHealth();
+				}),
+		);
+
+	new Setting(diagnostics)
+		.setName('Clear diagnostic debug log')
+		.setDesc('Wipes the contents of .obsidian/plugins/folder-notes/debug.log.')
+		.addButton((button) =>
+			button
+				.setButtonText('Clear Log')
+				.setWarning()
+				.onClick(async () => {
+					const { Logger } = require('../../backend/utils/Logger');
+					await Logger.getInstance().clearLog();
+					const { Notice } = require('obsidian');
+					new Notice('Folder Notes: debug.log cleared.');
+				}),
+		);
 }
 
 export default renderGeneral;

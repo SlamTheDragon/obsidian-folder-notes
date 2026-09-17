@@ -124,6 +124,34 @@ function processAddedFolders(node: HTMLElement, plugin: FolderNotesPlugin): void
 		}
 		setupFolderTitle(folderTitle, plugin, folderPath);
 	});
+
+	// Also check if any file items were added (e.g. expanding a folder)
+	const fileTitles: HTMLElement[] = [];
+	if (node.matches('.nav-file-title')) {
+		fileTitles.push(node);
+	}
+	node.querySelectorAll('.nav-file-title').forEach((el) => {
+		fileTitles.push(el as HTMLElement);
+	});
+
+	fileTitles.forEach((fileEl) => {
+		const filePath = fileEl.getAttribute('data-path');
+		if (filePath) {
+			const file = plugin.app.vault.getAbstractFileByPath(filePath);
+			if (file && (file as any).basename) {
+				const parentFolder = (file as any).parent;
+				if (parentFolder) {
+					const note = getFolderNote(plugin, parentFolder.path);
+					if (note && note.path === filePath) {
+						fileEl.addClass('is-folder-note');
+						if (fileEl.parentElement) {
+							fileEl.parentElement.addClass('is-folder-note');
+						}
+					}
+				}
+			}
+		}
+	});
 }
 
 async function setupFolderTitle(

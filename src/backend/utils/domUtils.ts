@@ -8,6 +8,7 @@ import {
 import { getFolder, getFolderNote } from '../core/FolderNoteResolver';
 import { getFileExplorer } from './pathUtils';
 import { ExcludedFolder } from '../types/exclude';
+import { Logger } from './Logger';
 
 /**
  * Refreshes the CSS classes for all folder notes in the file explorer.
@@ -154,6 +155,9 @@ export async function addCSSClassToFileExplorerEl(
 		}
 		return;
 	}
+
+	Logger.getInstance().logDom('addCSSClass', path, cssClass, true);
+
 	if (parent) {
 		const parentElement = fileExplorerItem?.parentElement;
 		if (parentElement) {
@@ -161,8 +165,15 @@ export async function addCSSClassToFileExplorerEl(
 		}
 	} else {
 		fileExplorerItem.addClass(cssClass);
+		// Also decorate parent container element (.nav-file or .nav-folder) for comprehensive CSS matching
+		if (fileExplorerItem.parentElement) {
+			fileExplorerItem.parentElement.addClass(cssClass);
+		}
 		activeDocument.querySelectorAll(`[data-path='${CSS.escape(path)}']`).forEach((item) => {
 			item.addClass(cssClass);
+			if (item.parentElement) {
+				item.parentElement.addClass(cssClass);
+			}
 		});
 	}
 }
@@ -179,8 +190,13 @@ export function removeCSSClassFromFileExplorerEL(
 ): void {
 	if (!path) return;
 	const fileExplorerItem = getFileExplorerElement(path, plugin);
+	Logger.getInstance().logDom('removeCSSClass', path, cssClass, false);
+
 	activeDocument.querySelectorAll(`[data-path='${CSS.escape(path)}']`).forEach((item) => {
 		item.removeClass(cssClass);
+		if (item.parentElement) {
+			item.parentElement.removeClass(cssClass);
+		}
 	});
 	if (!fileExplorerItem) { return; }
 	if (parent) {
@@ -191,6 +207,9 @@ export function removeCSSClassFromFileExplorerEL(
 		return;
 	}
 	fileExplorerItem.removeClass(cssClass);
+	if (fileExplorerItem.parentElement) {
+		fileExplorerItem.parentElement.removeClass(cssClass);
+	}
 }
 
 export function getFileExplorerElement(
@@ -235,7 +254,11 @@ export function setActiveFolder(folderPath: string, plugin: FolderNotesPlugin): 
 	const fileExplorerItem = getFileExplorerElement(folderPath, plugin);
 	if (fileExplorerItem) {
 		fileExplorerItem.addClass('fn-is-active');
+		if (fileExplorerItem.parentElement) {
+			fileExplorerItem.parentElement.addClass('fn-is-active');
+		}
 		plugin.activeFolderDom = fileExplorerItem;
+		Logger.getInstance().logDom('setActiveFolder', folderPath, 'fn-is-active', true);
 	}
 }
 
@@ -243,6 +266,10 @@ export function removeActiveFolder(plugin: FolderNotesPlugin): void {
 	if (plugin.activeFolderDom) {
 		plugin.activeFolderDom.removeClass('fn-is-active');
 		plugin.activeFolderDom?.removeClass('has-focus');
+		if (plugin.activeFolderDom.parentElement) {
+			plugin.activeFolderDom.parentElement.removeClass('fn-is-active');
+		}
+		Logger.getInstance().logDom('removeActiveFolder', plugin.activeFolderDom.getAttribute('data-path') || '', 'fn-is-active', false);
 		plugin.activeFolderDom = null;
 	}
 }

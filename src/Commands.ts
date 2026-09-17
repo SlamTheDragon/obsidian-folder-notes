@@ -50,6 +50,56 @@ export class Commands {
 		this.fileCommands();
 		this.regularCommands();
 		this.overviewCommands();
+		this.diagnosticCommands();
+	}
+
+	diagnosticCommands(): void {
+		this.plugin.addCommand({
+			id: 'run-diagnostic-self-test',
+			name: 'Run diagnostic self-test',
+			callback: async () => {
+				const { DiagnosticRunner } = await import('./backend/diagnostics/DiagnosticRunner');
+				await new DiagnosticRunner(this.plugin).runSuite();
+			},
+		});
+
+		this.plugin.addCommand({
+			id: 'record-user-finding',
+			name: 'Record user observation / finding',
+			callback: async () => {
+				const { UserFindingModal } = await import('./frontend/modals/UserFindingModal');
+				new UserFindingModal(this.app, this.plugin).open();
+			},
+		});
+
+		this.plugin.addCommand({
+			id: 'scan-vault-telemetry-health',
+			name: 'Scan vault telemetry and health audit',
+			callback: async () => {
+				const { TelemetryScanner } = await import('./backend/diagnostics/TelemetryScanner');
+				await new TelemetryScanner(this.plugin).scanVaultHealth();
+			},
+		});
+
+		this.plugin.addCommand({
+			id: 'view-debug-log',
+			name: 'View / export diagnostic debug log',
+			callback: async () => {
+				const { Logger } = await import('./backend/utils/Logger');
+				const content = await Logger.getInstance().getLogContent();
+				new Notice(`Folder Notes: debug.log loaded (${content.length} bytes). Check Developer Console or .obsidian/plugins/folder-notes/debug.log.`);
+			},
+		});
+
+		this.plugin.addCommand({
+			id: 'clear-debug-log',
+			name: 'Clear diagnostic debug log',
+			callback: async () => {
+				const { Logger } = await import('./backend/utils/Logger');
+				await Logger.getInstance().clearLog();
+				new Notice('Folder Notes: debug.log cleared.');
+			},
+		});
 	}
 
 	overviewCommands(): void {

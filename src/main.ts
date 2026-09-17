@@ -52,6 +52,7 @@ import { getFileExplorer } from './backend/utils/pathUtils';
 import { FOLDER_OVERVIEW_VIEW, FolderOverviewView } from './frontend/views/FolderOverviewView';
 import { OverviewIndexService } from './backend/overview/OverviewIndexService';
 import { registerOverviewPostProcessor } from './frontend/overview/OverviewPostProcessor';
+import { Logger } from './backend/utils/Logger';
 
 interface FileExplorerPluginLike extends Plugin {
 	revealInFolder: (file: TAbstractFile) => void;
@@ -108,6 +109,7 @@ export default class FolderNotesPlugin extends Plugin {
 	async onload(): Promise<void> {
 		console.debug('loading folder notes plugin');
 		await this.loadSettings();
+		Logger.getInstance().initialize(this);
 		this.settingsTab = new SettingsTab(this.app, this);
 		this.addSettingTab(this.settingsTab);
 		await this.saveSettings();
@@ -422,6 +424,14 @@ export default class FolderNotesPlugin extends Plugin {
 		if (!folderPath) return;
 
 		const usedCtrl = this.isCtrlUsed(evt);
+		Logger.getInstance().logInteraction('FileExplorerClick', {
+			folderPath,
+			usedCtrl,
+			altKey: evt.altKey,
+			button: evt.button,
+			targetClass: target.className,
+		}, 'handleFileExplorerClick');
+
 		const folderNote = getFolderNote(this, folderPath);
 
 		if (!folderNote && this.shouldCreateNote(evt, usedCtrl)) {
@@ -656,6 +666,8 @@ export default class FolderNotesPlugin extends Plugin {
 			this.originalClipboardProto.handleDragOver = this.originalHandleDragOver;
 			this.originalClipboardProto.handleDrop = this.originalHandleDrop;
 		}
+
+		void Logger.getInstance().flush();
 	}
 
 	async loadSettings(): Promise<void> {

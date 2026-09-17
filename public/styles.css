@@ -1,7 +1,11 @@
 .hide,
 .hide-folder .folder-name,
-.hide-folder-note .is-folder-note {
-  display: none;
+.hide-folder-note .is-folder-note,
+.hide-folder-note .nav-file.is-folder-note,
+.hide-folder-note .nav-file:has(.is-folder-note),
+.hide-folder-note .tree-item.is-folder-note,
+.hide-folder-note .tree-item:has(.is-folder-note) {
+  display: none !important;
 }
 
 /* make.md plugin integration */
@@ -28,13 +32,17 @@
 }
 
 body:not(.is-grabbing) .tree-item-self.fn-is-active:hover,
-body:not(.disable-folder-highlight) .tree-item-self.fn-is-active {
-  color: var(--nav-item-color-active);
-  background-color: var(--nav-item-background-active);
+body:not(.disable-folder-highlight) .tree-item-self.fn-is-active,
+body:not(.disable-folder-highlight) .nav-folder-title.fn-is-active,
+body:not(.disable-folder-highlight) .nav-folder.fn-is-active > .nav-folder-title {
+  color: var(--nav-item-color-active) !important;
+  background-color: var(--nav-item-background-active) !important;
   font-weight: var(--nav-item-weight-active);
 }
 
-.folder-note-underline .has-folder-note .nav-folder-title-content {
+.folder-note-underline .has-folder-note .nav-folder-title-content,
+.folder-note-underline .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-underline .nav-folder-title.has-folder-note .nav-folder-title-content {
   text-decoration-line: underline;
   text-decoration-color: var(--text-faint);
   text-decoration-thickness: 2px;
@@ -49,11 +57,15 @@ body:not(.disable-folder-highlight) .tree-item-self.fn-is-active {
 }
 
 .folder-note-bold .has-folder-note .nav-folder-title-content,
+.folder-note-bold .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-bold .nav-folder-title.has-folder-note .nav-folder-title-content,
 .folder-note-bold-path .has-folder-note.view-header-breadcrumb {
   font-weight: bold;
 }
 
 .folder-note-cursive .has-folder-note .nav-folder-title-content,
+.folder-note-cursive .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-cursive .nav-folder-title.has-folder-note .nav-folder-title-content,
 .folder-note-cursive-path .has-folder-note.view-header-breadcrumb {
   font-style: italic;
 }

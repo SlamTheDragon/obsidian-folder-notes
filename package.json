@@ -13,6 +13,7 @@
 		"version:major": "bun scripts/version-bump.mjs major",
 		"test": "bun test --preload ./tests/obsidian_mock.ts",
 		"test:all": "bun test --preload ./tests/obsidian_mock.ts",
+		"testbed:verify": "bun scripts/testbed-harness.mjs",
 		"fn-dev": "node esbuild.config.mjs",
 		"fn-build": "node esbuild.config.mjs production",
 		"version": "node scripts/version-bump.mjs patch"

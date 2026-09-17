@@ -85,9 +85,11 @@ export interface FolderNotesSettings {
 	};
 	hideFolderNoteNameInPath: boolean;
 	fileExplorerRevealMargin: number;
+	enableVerboseLogging: boolean;
 }
 
 export const DEFAULT_SETTINGS: FolderNotesSettings = {
+	enableVerboseLogging: true,
 	syncFolderName: true,
 	ctrlKey: true,
 	altKey: false,

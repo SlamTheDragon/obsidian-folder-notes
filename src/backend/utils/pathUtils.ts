@@ -46,14 +46,14 @@ export function getParentFolderPath(path: string): string {
 export function getFileExplorer(
 	plugin: FolderNotesPlugin,
 ): FileExplorerWorkspaceLeaf | undefined {
-
-	let leaf = plugin.app.workspace.getLeavesOfType('file-explorer')[0];
+	if (!plugin.app?.workspace?.getLeavesOfType) { return undefined; }
+	let leaf = plugin.app.workspace.getLeavesOfType('file-explorer')?.[0];
 
 	if (!leaf) { return undefined; }
 
 	/* make.md plugin integration */
 	if ((leaf.containerEl?.lastChild as HTMLElement)?.dataset?.type === 'mk-path-view') {
-		plugin.app.workspace.iterateAllLeaves((x) => {
+		plugin.app.workspace.iterateAllLeaves?.((x) => {
 			if (isFileExplorerWorkspaceLeaf(x)) {
 				leaf = x;
 			}

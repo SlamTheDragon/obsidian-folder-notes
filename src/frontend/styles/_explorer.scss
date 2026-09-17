@@ -3,13 +3,17 @@
 
 // Tree Items, File Explorer & Path Styling
 body:not(.is-grabbing) .tree-item-self.fn-is-active:hover,
-body:not(.disable-folder-highlight) .tree-item-self.fn-is-active {
-  color: $nav-item-color-active;
-  background-color: $nav-item-background-active;
+body:not(.disable-folder-highlight) .tree-item-self.fn-is-active,
+body:not(.disable-folder-highlight) .nav-folder-title.fn-is-active,
+body:not(.disable-folder-highlight) .nav-folder.fn-is-active > .nav-folder-title {
+  color: $nav-item-color-active !important;
+  background-color: $nav-item-background-active !important;
   font-weight: $nav-item-weight-active;
 }
 
-.folder-note-underline .has-folder-note .nav-folder-title-content {
+.folder-note-underline .has-folder-note .nav-folder-title-content,
+.folder-note-underline .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-underline .nav-folder-title.has-folder-note .nav-folder-title-content {
   text-decoration-line: underline;
   text-decoration-color: $text-faint;
   text-decoration-thickness: 2px;
@@ -24,11 +28,15 @@ body:not(.disable-folder-highlight) .tree-item-self.fn-is-active {
 }
 
 .folder-note-bold .has-folder-note .nav-folder-title-content,
+.folder-note-bold .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-bold .nav-folder-title.has-folder-note .nav-folder-title-content,
 .folder-note-bold-path .has-folder-note.view-header-breadcrumb {
   font-weight: bold;
 }
 
 .folder-note-cursive .has-folder-note .nav-folder-title-content,
+.folder-note-cursive .nav-folder.has-folder-note .nav-folder-title-content,
+.folder-note-cursive .nav-folder-title.has-folder-note .nav-folder-title-content,
 .folder-note-cursive-path .has-folder-note.view-header-breadcrumb {
   font-style: italic;
 }

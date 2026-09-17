@@ -12,3 +12,4 @@ export * from './PatternModal';
 export * from './WhitelistFolderModal';
 export * from './WhitelistPatternModal';
 export * from './WhitelistedFoldersModal';
+export * from './UserFindingModal';

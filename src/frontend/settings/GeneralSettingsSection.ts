@@ -57,8 +57,6 @@ export async function renderGeneral(settingsTab: SettingsTab): Promise<void> {
 						.open();
 				}),
 		);
-	nameSetting.infoEl.appendText('Requires a restart to take effect');
-	nameSetting.infoEl.style.color = (settingsTab.app.vault.getConfig('accentColor') as string) || '#7d5bed';
 
 	if (!settingsTab.plugin.settings.folderNoteName.includes('{{folder_name}}')) {
 		new Setting(containerEl)
@@ -208,9 +206,6 @@ export async function renderGeneral(settingsTab: SettingsTab): Promise<void> {
 					).open();
 				}),
 		);
-	storageSetting.infoEl.appendText('Requires a restart to take effect');
-	const storageAccentColor = settingsTab.app.vault.getConfig('accentColor') as string || '#7d5bed';
-	storageSetting.infoEl.style.color = storageAccentColor;
 
 	new Setting(containerEl)
 		.setName('Auto-sync folder name')

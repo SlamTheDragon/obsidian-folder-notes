@@ -14,6 +14,7 @@ import {
 	buildYamlConfig,
 	getFolderPathFromString,
 	parseOverviewTitle,
+	resolveSourceFolder,
 } from '../../backend/overview/overviewUtils';
 import { updateLinkList, removeLinkList } from '../../backend/overview/LinkListService';
 import { getFolder } from '../../backend/core/FolderNoteResolver';
@@ -179,36 +180,16 @@ export class FolderOverviewComponent {
 	}
 
 	private setSourceFolder(): void {
-		const folderPath = this.yaml?.folderPath?.trim() ?? '';
-		switch (folderPath) {
-			case '':
-			case 'File’s parent folder path': {
-				const parentPath = getFolderPathFromString(this.ctx.sourcePath);
-				const sourceFolder = this.plugin.app.vault.getAbstractFileByPath(parentPath);
-				if (sourceFolder instanceof TFolder) {
-					this.yaml.folderPath = sourceFolder.path;
-					this.sourceFolder = sourceFolder;
-				}
-				break;
-			}
-			case 'Path of folder linked to the file': {
-				if (this.sourceFile instanceof TFile) {
-					const linkedFolder = getFolder(this.plugin, this.sourceFile);
-					if (linkedFolder instanceof TFolder) {
-						this.sourceFolder = linkedFolder;
-						this.yaml.folderPath = linkedFolder.path;
-					} else {
-						this.yaml.folderPath = '';
-					}
-				}
-				break;
-			}
-			default: {
-				const sourceFolder = this.plugin.app.vault.getAbstractFileByPath(this.yaml.folderPath);
-				if (sourceFolder instanceof TFolder) {
-					this.sourceFolder = sourceFolder;
-				}
-			}
+		const sourceFolder = resolveSourceFolder(
+			this.plugin,
+			this.yaml.folderPath,
+			this.sourceFile,
+		);
+		if (sourceFolder instanceof TFolder) {
+			this.sourceFolder = sourceFolder;
+			this.yaml.folderPath = sourceFolder.path;
+		} else {
+			this.sourceFolder = null;
 		}
 	}
 

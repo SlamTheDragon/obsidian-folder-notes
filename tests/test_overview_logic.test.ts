@@ -14,6 +14,7 @@ import {
 	getFolderPathFromString,
 	cleanYamlBlock,
 	buildNewBlock,
+	buildLinkListBlock,
 } from '../src/backend/overview/overviewUtils';
 import type { defaultOverviewSettings } from '../src/backend/types/overview';
 
@@ -175,5 +176,11 @@ describe('Title Interpolation & Code Block Parsing', () => {
 
 		const rebuiltCallout = buildNewBlock('id: abc\n', true);
 		expect(rebuiltCallout).toContain('> ```folder-overview\n> id: abc\n> ```');
+
+		const linkListStandard = buildLinkListBlock('test-id', false);
+		expect(linkListStandard).toContain('<span class="fv-link-list-start" id="test-id"></span>');
+
+		const linkListCallout = buildLinkListBlock('test-id', true);
+		expect(linkListCallout).toContain('> <span class="fv-link-list-start" id="test-id"></span>');
 	});
 });

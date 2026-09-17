@@ -8,7 +8,7 @@ import {
 } from 'obsidian';
 import type FolderNotesPlugin from '../../../main';
 import { filterFiles, sortFiles } from '../../../backend/overview/FolderOverviewLogic';
-import { getFolderPathFromString } from '../../../backend/overview/overviewUtils';
+import { getFolderPathFromString, resolveSourceFolder } from '../../../backend/overview/overviewUtils';
 import type { defaultOverviewSettings } from '../../../backend/types/overview';
 import type { FolderOverviewComponent } from '../OverviewPostProcessor';
 import { extractFolderName, getFolderNote } from '../../../backend/core/FolderNoteResolver';
@@ -56,15 +56,9 @@ export class ExplorerOverviewRenderer {
 			overviewList.empty();
 		}
 
-		let tFolder = this.plugin.app.vault.getAbstractFileByPath(this.yaml.folderPath);
+		let tFolder = resolveSourceFolder(this.plugin, this.yaml.folderPath, this.overview.sourceFile);
 		if (!tFolder && this.yaml.folderPath.trim() === '') {
-			if (this.ctx.sourcePath.includes('/')) {
-				const folderPath = getFolderPathFromString(this.ctx.sourcePath);
-				tFolder = this.plugin.app.vault.getAbstractFileByPath(folderPath);
-			} else {
-				this.yaml.folderPath = '/';
-				tFolder = this.plugin.app.vault.getRoot();
-			}
+			tFolder = resolveSourceFolder(this.plugin, getFolderPathFromString(this.ctx.sourcePath), this.overview.sourceFile);
 		}
 
 		if (!(tFolder instanceof TFolder)) return;
@@ -85,7 +79,7 @@ export class ExplorerOverviewRenderer {
 			this.overview.off('vault-change', handleVaultChange);
 		});
 
-		const files = tFolder.path === '/'
+		const files = (tFolder.path === '/' || tFolder.isRoot?.())
 			? this.plugin.app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
 			: tFolder.children;
 

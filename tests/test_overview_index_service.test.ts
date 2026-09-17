@@ -1,21 +1,44 @@
 import { describe, it, expect } from 'bun:test';
 import { OverviewIndexService } from '../src/backend/overview/OverviewIndexService';
+import { resolveSourceFolder } from '../src/backend/overview/overviewUtils';
+import { TFile, TFolder } from 'obsidian';
 
 describe('OverviewIndexService Reactive In-Memory Tracking', () => {
+	const rootFolder = new TFolder('/', '');
+	const projectsFolder = new TFolder('Projects', 'Projects');
+	const projectAlpha = new TFile('Projects/Alpha.md', 'Alpha.md', 'md');
+	projectsFolder.children = [projectAlpha];
+	projectAlpha.parent = projectsFolder;
+
 	const mockPlugin: any = {
 		settings: {
+			folderNoteName: '{{folder_name}}',
+			storageLocation: 'insideFolder',
+			supportedFileTypes: ['md', 'canvas'],
 			fvGlobalSettings: {
 				autoUpdateLinks: true,
 			},
 			defaultOverview: {
 				sortBy: 'name',
 				sortByAsc: true,
+				useWikilinks: true,
+				depth: 2,
+				includeTypes: ['folder', 'markdown'],
 			},
 		},
 		app: {
 			vault: {
-				getMarkdownFiles: () => [],
-				getAbstractFileByPath: () => null,
+				getRoot: () => rootFolder,
+				getMarkdownFiles: () => [projectAlpha],
+				getAbstractFileByPath: (path: string) => {
+					if (path === '/' || path === '') return rootFolder;
+					if (path === 'Projects') return projectsFolder;
+					if (path === 'Projects/Alpha.md') return projectAlpha;
+					return null;
+				},
+				getAllLoadedFiles: () => [projectsFolder, projectAlpha],
+				read: async () => '```folder-overview\nid: "overview-1"\nuseActualLinks: true\n```\n<span class="fv-link-list-start" id="overview-1"></span>\n<span class="fv-link-list-end" id="overview-1"></span>',
+				process: async (file: any, fn: any) => fn('```folder-overview\nid: "overview-1"\nuseActualLinks: true\n```\n<span class="fv-link-list-start" id="overview-1"></span>\n<span class="fv-link-list-end" id="overview-1"></span>'),
 			},
 		},
 	};
@@ -49,5 +72,27 @@ describe('OverviewIndexService Reactive In-Memory Tracking', () => {
 		service.handleDelete('Temporary/Note.md');
 
 		expect(service.getAllNotes()).not.toContain('Temporary/Note.md');
+	});
+
+	it('resolves source folder paths uniformly via resolveSourceFolder', () => {
+		const resolvedRoot = resolveSourceFolder(mockPlugin, '/');
+		expect(resolvedRoot?.path).toBe('/');
+
+		const resolvedParent = resolveSourceFolder(mockPlugin, '', projectAlpha);
+		expect(resolvedParent?.path).toBe('Projects');
+
+		const resolvedNamed = resolveSourceFolder(mockPlugin, 'Projects');
+		expect(resolvedNamed?.path).toBe('Projects');
+
+		const resolvedLinked = resolveSourceFolder(mockPlugin, 'Path of folder linked to the file', projectAlpha);
+		expect(resolvedLinked?.path).toBe('Projects');
+	});
+
+	it('executes updateAllOverviews successfully for indexed notes', async () => {
+		const service = new OverviewIndexService(mockPlugin);
+		service.addNote('Projects/Alpha.md');
+
+		await service.updateAllOverviews();
+		expect(service.getAllNotes()).toContain('Projects/Alpha.md');
 	});
 });

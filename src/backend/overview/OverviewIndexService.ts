@@ -6,12 +6,10 @@ import {
 } from 'obsidian';
 import type FolderNotesPlugin from '../../main';
 import {
-	filterFiles,
-	getAllFiles,
 	getOverviews,
 	hasOverviewYaml,
-	sortFiles,
 } from './FolderOverviewLogic';
+import { resolveSourceFolder } from './overviewUtils';
 import { updateLinkList } from './LinkListService';
 
 export class OverviewIndexService {
@@ -75,6 +73,7 @@ export class OverviewIndexService {
 		} else {
 			this.indexedNotePaths.delete(file.path);
 		}
+		this.triggerDebouncedUpdate();
 	}
 
 	public getAllNotes(): string[] {
@@ -110,50 +109,18 @@ export class OverviewIndexService {
 			for (const overview of overviews) {
 				if (!overview.useActualLinks) continue;
 
-				let sourceFolderPath = (overview.folderPath || '').trim();
-				// Properly resolve top-level folder names without wiping them to '/'
-				if (sourceFolderPath === '' || sourceFolderPath === 'File’s parent folder path') {
-					sourceFolderPath = file.parent?.path ?? '/';
-				}
-
-				let sourceFolder: TAbstractFile | null = null;
-				if (sourceFolderPath === '/' || sourceFolderPath === '') {
-					sourceFolder = this.plugin.app.vault.getRoot();
-				} else {
-					sourceFolder = this.plugin.app.vault.getAbstractFileByPath(sourceFolderPath);
-				}
-
+				const sourceFolder = resolveSourceFolder(this.plugin, overview.folderPath, file);
 				if (!(sourceFolder instanceof TFolder)) {
 					continue;
 				}
 
-				let files: TAbstractFile[] = [];
-				if (sourceFolder.path === '/' || sourceFolderPath === '/') {
-					files = this.plugin.app.vault
+				const files: TAbstractFile[] = (sourceFolder.path === '/' || sourceFolder.isRoot?.())
+					? this.plugin.app.vault
 						.getAllLoadedFiles()
-						.filter((f) => f.parent?.path === '/' || !f.path.includes('/'));
-				} else {
-					files = sourceFolder.children;
-				}
+						.filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
+					: sourceFolder.children;
 
-				files = getAllFiles(files, sourceFolderPath, overview.depth);
-				const filteredFiles = await filterFiles(
-					files,
-					this.plugin,
-					sourceFolderPath,
-					overview.depth,
-					[],
-					overview,
-					file,
-				);
-
-				let sortedFiles = filteredFiles.filter((f): f is TAbstractFile => f !== null);
-				if (!overview.includeTypes.includes('folder')) {
-					sortedFiles = getAllFiles(sortedFiles, sourceFolderPath, overview.depth);
-				}
-				sortedFiles = sortFiles(sortedFiles, overview, this.plugin);
-
-				await updateLinkList(sortedFiles, this.plugin, overview, [], file);
+				await updateLinkList(files, this.plugin, overview, [], file);
 			}
 		}
 	}

@@ -7,7 +7,7 @@ import {
 import type FolderNotesPlugin from '../../../main';
 import { extractFolderName, getFolderNote } from '../../../backend/core/FolderNoteResolver';
 import { filterFiles, sortFiles } from '../../../backend/overview/FolderOverviewLogic';
-import { getFolderPathFromString } from '../../../backend/overview/overviewUtils';
+import { getFolderPathFromString, resolveSourceFolder } from '../../../backend/overview/overviewUtils';
 import type { defaultOverviewSettings } from '../../../backend/types/overview';
 import type { FolderOverviewComponent } from '../OverviewPostProcessor';
 
@@ -50,19 +50,14 @@ export class ListOverviewRenderer {
 		overviewList.empty();
 
 		const { app } = this.plugin;
-		let tFolder = app.vault.getAbstractFileByPath(this.yaml.folderPath);
+		let tFolder = resolveSourceFolder(this.plugin, this.yaml.folderPath, this.overview.sourceFile);
 		if (!tFolder && this.yaml.folderPath.trim() === '') {
-			if (this.ctx.sourcePath.includes('/')) {
-				tFolder = app.vault.getAbstractFileByPath(getFolderPathFromString(this.ctx.sourcePath));
-			} else {
-				this.yaml.folderPath = '/';
-				tFolder = app.vault.getRoot();
-			}
+			tFolder = resolveSourceFolder(this.plugin, getFolderPathFromString(this.ctx.sourcePath), this.overview.sourceFile);
 		}
 
 		if (!(tFolder instanceof TFolder)) return;
 
-		let files = tFolder.path === '/'
+		let files = (tFolder.path === '/' || tFolder.isRoot?.())
 			? app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
 			: tFolder.children;
 

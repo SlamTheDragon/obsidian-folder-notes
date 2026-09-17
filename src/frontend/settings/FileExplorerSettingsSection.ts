@@ -25,7 +25,7 @@ export async function renderFileExplorer(settingsTab: SettingsTab): Promise<void
 				}),
 		);
 
-	const setting2 = new Setting(containerEl)
+	new Setting(containerEl)
 		.setName('Disable click-to-open folder note on mobile')
 		.setDesc('Prevents folder notes from opening when tapping the folder name or surrounding area on mobile devices. They can now only be opened via the context menu or a command.')
 		.addToggle((toggle) =>
@@ -36,10 +36,6 @@ export async function renderFileExplorer(settingsTab: SettingsTab): Promise<void
 					await settingsTab.plugin.saveSettings();
 				}),
 		);
-
-	setting2.infoEl.appendText('Requires a restart to take effect');
-	const setting2AccentColor = settingsTab.app.vault.getConfig('accentColor') as string || '#7d5bed';
-	setting2.infoEl.style.color = setting2AccentColor;
 
 	new Setting(containerEl)
 		.setName('Open folder notes by only clicking directly on the folder name')
@@ -69,9 +65,6 @@ export async function renderFileExplorer(settingsTab: SettingsTab): Promise<void
 				await settingsTab.plugin.saveSettings();
 			}),
 	);
-	disableSetting.infoEl.appendText('Requires a restart to take effect');
-	const accentColor = settingsTab.app.vault.getConfig('accentColor') as string || '#7d5bed';
-	disableSetting.infoEl.style.color = accentColor;
 
 	new Setting(containerEl)
 		.setName('Use submenus')

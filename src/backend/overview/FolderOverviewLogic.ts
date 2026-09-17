@@ -15,6 +15,7 @@ import {
 	getYamlBlocks,
 	cleanYamlBlock,
 	buildNewBlock,
+	buildLinkListBlock,
 	updateYamlById,
 } from './overviewUtils';
 import { vaultWriteQueue } from './VaultWriteQueue';
@@ -305,6 +306,7 @@ export async function updateYaml(
 	}
 
 	await vaultWriteQueue.enqueueProcess(plugin.app, file, async (text) => {
+		const isCallout = yaml.isInCallout ?? false;
 		const info = el ? ctx.getSectionInfo(el) : null;
 		if (info) {
 			const { lineStart } = info;
@@ -312,11 +314,9 @@ export async function updateYaml(
 			if (lineEnd === NO_CODEBLOCK_END || lineEnd === undefined) return text;
 			const lineLength = lineEnd - lineStart;
 			const lines = text.split(/\r?\n/);
-			let overviewBlock = `\`\`\`folder-overview\n${stringYaml}\`\`\``;
+			let overviewBlock = buildNewBlock(stringYaml, isCallout);
 			if (addLinkList) {
-				overviewBlock +=
-					`\n<span class="fv-link-list-start" id="${yaml.id}"></span>` +
-					`\n<span class="fv-link-list-end" id="${yaml.id}"></span>`;
+				overviewBlock += buildLinkListBlock(yaml.id, isCallout);
 			}
 			lines.splice(lineStart, lineLength + 1, overviewBlock);
 			return lines.join('\n');
@@ -327,18 +327,16 @@ export async function updateYaml(
 		let updatedText = text;
 		for (const overview of overviews) {
 			if (overview.id === yaml.id) {
-				const isCallout = overview.isInCallout ?? false;
-				const yamlBlocks = getYamlBlocks(updatedText, isCallout);
+				const blockIsCallout = overview.isInCallout ?? false;
+				const yamlBlocks = getYamlBlocks(updatedText, blockIsCallout);
 				if (yamlBlocks) {
 					for (const block of yamlBlocks) {
-						const cleaned = cleanYamlBlock(block, isCallout);
+						const cleaned = cleanYamlBlock(block, blockIsCallout);
 						const parsed = parseYaml(cleaned);
 						if (parsed?.id === yaml.id) {
-							let newBlock = buildNewBlock(stringYaml, isCallout);
+							let newBlock = buildNewBlock(stringYaml, blockIsCallout);
 							if (addLinkList) {
-								newBlock += (isCallout
-									? `\n> <span class="fv-link-list-start" id="${yaml.id}"></span>\n> <span class="fv-link-list-end" id="${yaml.id}"></span>`
-									: `\n<span class="fv-link-list-start" id="${yaml.id}"></span>\n<span class="fv-link-list-end" id="${yaml.id}"></span>`);
+								newBlock += buildLinkListBlock(yaml.id, blockIsCallout);
 							}
 							updatedText = updatedText.replace(block, newBlock);
 						}

@@ -210,7 +210,7 @@ function isFolderRename(folder: TFolder, oldPath: string): boolean {
 }
 
 export function handleFolderMove(file: TFolder, oldPath: string, plugin: FolderNotesPlugin): void {
-	if (plugin.settings.storageLocation === 'insideFolder') { return; }
+	if (plugin.settings.storageLocation === 'insideFolder' || plugin.settings.storageLocation === 'vaultFolder') { return; }
 	if (!plugin.settings.syncMove) { return; }
 	const folderNote = getFolderNote(plugin, oldPath, plugin.settings.storageLocation);
 	if (!(file instanceof TFolder) || !folderNote) return;
@@ -218,10 +218,10 @@ export function handleFolderMove(file: TFolder, oldPath: string, plugin: FolderN
 	if (!(newFolder instanceof TFolder)) return;
 	let newPath = folderNote.path;
 
-	if (newFolder.path === '/') {
+	if (!newFolder.parent || newFolder.parent.isRoot?.() || newFolder.parent.path === '/' || newFolder.parent.path === '') {
 		newPath = folderNote.name;
 	} else {
-		newPath = `${newFolder.parent?.path}/${folderNote.name}`;
+		newPath = `${newFolder.parent.path}/${folderNote.name}`;
 	}
 
 	plugin.app.fileManager.renameFile(folderNote, newPath);
@@ -321,6 +321,8 @@ function handleFolderRename(folder: TFolder, oldPath: string, plugin: FolderNote
 			} else {
 				newPath = `${parentPath}/${newNoteName}.${oldFolderNote.extension}`;
 			}
+		} else if (plugin.settings.storageLocation === 'vaultFolder') {
+			newPath = `${newNoteName}.${oldFolderNote.extension}`;
 		}
 		plugin.app.fileManager.renameFile(oldFolderNote, newPath);
 	}

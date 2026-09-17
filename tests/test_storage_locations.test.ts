@@ -53,5 +53,31 @@ describe('Folder Note Storage Location Resolution', () => {
     const excalidrawPath = computeFolderNotePath('Designs/Mockups', 'insideFolder', '{{folder_name}}', '.excalidraw.md');
     expect(excalidrawPath).toBe('Designs/Mockups/Mockups.excalidraw.md');
   });
+
+  it('correctly calculates new note path on folder rename for all storage locations', () => {
+    function computeRenameNotePath(
+      folderName: string,
+      folderPath: string,
+      storageLocation: 'insideFolder' | 'parentFolder' | 'vaultFolder',
+      ext: string = 'md'
+    ): string {
+      const newNoteName = `{{folder_name}}`.replace('{{folder_name}}', folderName);
+      if (storageLocation === 'parentFolder') {
+        const parentPath = getFolderPathFromString(folderPath);
+        if (parentPath.trim() === '' || parentPath === '/') {
+          return `${newNoteName}.${ext}`;
+        }
+        return `${parentPath}/${newNoteName}.${ext}`;
+      } else if (storageLocation === 'vaultFolder') {
+        return `${newNoteName}.${ext}`;
+      }
+      return `${folderPath}/${newNoteName}.${ext}`;
+    }
+
+    expect(computeRenameNotePath('Beta', 'Projects/Beta', 'insideFolder')).toBe('Projects/Beta/Beta.md');
+    expect(computeRenameNotePath('Beta', 'Projects/Beta', 'parentFolder')).toBe('Projects/Beta.md');
+    expect(computeRenameNotePath('Beta', 'Beta', 'parentFolder')).toBe('Beta.md');
+    expect(computeRenameNotePath('Beta', 'Projects/Beta', 'vaultFolder')).toBe('Beta.md');
+  });
 });
 

@@ -2,11 +2,12 @@ import {
 	type MarkdownPostProcessorContext,
 	parseYaml,
 	stringifyYaml,
-	type TFile,
-	type TFolder,
+	TFile,
+	TFolder,
 } from 'obsidian';
 import type { defaultOverviewSettings, includeTypes } from '../types/overview';
 import type FolderNotesPlugin from '../../main';
+import { getFolder } from '../core/FolderNoteResolver';
 import { vaultWriteQueue } from './VaultWriteQueue';
 
 export function getFolderPathFromString(path: string): string {
@@ -16,6 +17,32 @@ export function getFolderPathFromString(path: string): string {
 	}
 	const folderPath = path.substring(0, lastSlash);
 	return folderPath === '' ? '/' : folderPath;
+}
+
+export function resolveSourceFolder(
+	plugin: FolderNotesPlugin,
+	folderPathSpec: string | undefined,
+	sourceFile?: TFile,
+): TFolder | null {
+	const spec = (folderPathSpec || '').trim();
+	if (spec === '' || spec === 'File’s parent folder path') {
+		const parentPath = sourceFile ? getFolderPathFromString(sourceFile.path) : '/';
+		if (parentPath === '/' || parentPath === '') {
+			return plugin.app.vault.getRoot();
+		}
+		const folder = plugin.app.vault.getAbstractFileByPath(parentPath);
+		return folder instanceof TFolder ? folder : null;
+	}
+	if (spec === 'Path of folder linked to the file') {
+		if (!sourceFile) return null;
+		const linkedFolder = getFolder(plugin, sourceFile);
+		return linkedFolder instanceof TFolder ? linkedFolder : null;
+	}
+	if (spec === '/') {
+		return plugin.app.vault.getRoot();
+	}
+	const folder = plugin.app.vault.getAbstractFileByPath(spec);
+	return folder instanceof TFolder ? folder : null;
 }
 
 const CODE_BLOCK_END_NOT_FOUND = -1;

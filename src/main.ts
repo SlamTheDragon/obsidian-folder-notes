@@ -670,17 +670,19 @@ export default class FolderNotesPlugin extends Plugin {
 			}
 		}
 
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data, {
+			defaultOverview: Object.assign({}, DEFAULT_SETTINGS.defaultOverview, data?.defaultOverview),
+			frontMatterTitle: Object.assign({}, DEFAULT_SETTINGS.frontMatterTitle, data?.frontMatterTitle),
+			persistentSettingsTab: Object.assign({}, DEFAULT_SETTINGS.persistentSettingsTab, data?.persistentSettingsTab),
+			fvGlobalSettings: Object.assign({}, DEFAULT_SETTINGS.fvGlobalSettings, data?.fvGlobalSettings),
+			openSidebar: Object.assign({}, DEFAULT_SETTINGS.openSidebar, data?.openSidebar),
+			excludeFolderDefaultSettings: Object.assign({}, DEFAULT_SETTINGS.excludeFolderDefaultSettings, data?.excludeFolderDefaultSettings),
+			excludePatternDefaultSettings: Object.assign({}, DEFAULT_SETTINGS.excludePatternDefaultSettings, data?.excludePatternDefaultSettings),
+		});
+
 		if (!this.settings.oldFolderNoteName) {
 			this.settings.oldFolderNoteName = this.settings.folderNoteName;
 		}
-
-		if (!data) { return; }
-		const overview = data.defaultOverview;
-		if (!overview) { return; }
-		this.settings.defaultOverview = Object.assign(
-			{}, DEFAULT_SETTINGS.defaultOverview, overview,
-		);
 	}
 
 	async saveSettings(reloadStyles?: boolean): Promise<void> {

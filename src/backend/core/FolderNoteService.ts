@@ -38,6 +38,7 @@ import {
 import { AskForExtensionModal } from '../../frontend/modals/AskForExtensionModal';
 import { DeleteConfirmationModal } from '../../frontend/modals/DeleteConfirmationModal';
 import { ExistingFolderNoteModal } from '../../frontend/modals/ExistingFolderNoteModal';
+import { Logger } from '../utils/Logger';
 
 export async function createFolderNote(
 	plugin: FolderNotesPlugin,
@@ -47,6 +48,13 @@ export async function createFolderNote(
 	displayModal?: boolean,
 	preexistingNote?: TFile,
 ): Promise<void> {
+	Logger.getInstance().logInteraction('createFolderNote', {
+		folderPath,
+		openFile,
+		extension,
+		preexistingNote: preexistingNote?.path,
+	}, 'FolderNoteService.createFolderNote');
+
 	let {
 		leaf,
 		fileName,
@@ -55,6 +63,7 @@ export async function createFolderNote(
 		detachedFolder,
 		path,
 	} = getArgs(plugin, folderPath, extension, preexistingNote);
+
 
 	if (folderNoteType === '.excalidraw') {
 		folderNoteType = '.md';
@@ -229,6 +238,13 @@ export async function turnIntoFolderNote(
 	folderNote?: TFile | null | TAbstractFile,
 	skipConfirmation?: boolean,
 ): Promise<void> {
+	Logger.getInstance().logInteraction('turnIntoFolderNote', {
+		file: file.path,
+		folder: folder.path,
+		existingFolderNote: (folderNote as any)?.path,
+		skipConfirmation,
+	}, 'FolderNoteService.turnIntoFolderNote');
+
 	const { extension } = file;
 	const detachedExcludedFolder = getDetachedFolder(plugin, folder.path);
 
@@ -334,6 +350,13 @@ export async function openFolderNote(
 	const focusExistingTab = plugin.settings.focusExistingTab && plugin.settings.openInNewTab;
 	const activeFilePath = plugin.app.workspace.getActiveFile()?.path;
 
+	Logger.getInstance().logInteraction('openFolderNote', {
+		path,
+		openInNewTab: Keymap.isModEvent(evt) || plugin.settings.openInNewTab,
+		focusExistingTab,
+		activeFilePath,
+	}, 'FolderNoteService.openFolderNote');
+
 	// If already active and not opening in new tab, do nothing
 	if (activeFilePath === path && !(Keymap.isModEvent(evt) === 'tab')) {
 		return;
@@ -368,6 +391,12 @@ export async function deleteFolderNote(
 	file: TFile,
 	displayModal: boolean,
 ): Promise<void> {
+	Logger.getInstance().logInteraction('deleteFolderNote', {
+		path: file.path,
+		displayModal,
+		deleteFilesAction: plugin.settings.deleteFilesAction,
+	}, 'FolderNoteService.deleteFolderNote');
+
 	if (plugin.settings.showDeleteConfirmation && displayModal) {
 		return new DeleteConfirmationModal(plugin.app, plugin, file).open();
 	}
@@ -393,6 +422,10 @@ export async function deleteFolderNote(
 }
 
 export function detachFolderNote(plugin: FolderNotesPlugin, file: TFile): void {
+	Logger.getInstance().logInteraction('detachFolderNote', {
+		path: file.path,
+	}, 'FolderNoteService.detachFolderNote');
+
 	const folder = getFolder(plugin, file);
 	if (!folder) return;
 	const excludedFolder = new ExcludedFolder(
@@ -412,3 +445,4 @@ export function detachFolderNote(plugin: FolderNotesPlugin, file: TFile): void {
 	addExcludedFolder(plugin, excludedFolder);
 	void updateCSSClassesForFolderNote(file.path, plugin);
 }
+

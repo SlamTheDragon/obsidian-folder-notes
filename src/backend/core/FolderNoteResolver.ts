@@ -4,6 +4,7 @@ import { getDetachedFolder } from './ExcludeService';
 import {
 	getFolderNameFromPathString,
 	getFolderPathFromString,
+	getFileNameFromPathString,
 	removeExtension,
 } from '../utils/pathUtils';
 
@@ -66,12 +67,30 @@ export function findFolderNoteFile(
 	plugin: FolderNotesPlugin,
 	path: string,
 	primaryType: string,
+	parentFolder?: TFolder,
 ): TFile | null {
+	// 1. First check parent folder direct children in memory if available
+	if (parentFolder && parentFolder.children) {
+		const targetBaseName = getFileNameFromPathString(path);
+		const found = parentFolder.children.find(
+			(child) => child instanceof TFile && (
+				child.basename === targetBaseName ||
+				child.name === `${targetBaseName}.${child.extension}` ||
+				child.name === targetBaseName + primaryType
+			),
+		);
+		if (found instanceof TFile) {
+			return found;
+		}
+	}
+
+	// 2. Lookup by path with primary extension
 	let folderNote = plugin.app.vault.getAbstractFileByPath(path + primaryType);
 	if (folderNote instanceof TFile) {
 		return folderNote;
 	}
 
+	// 3. Fallback to supported file types
 	const supportedFileTypes = plugin.settings.supportedFileTypes || ['md', 'canvas'];
 	for (let type of supportedFileTypes) {
 		if (type === 'excalidraw' || type === '.excalidraw') {
@@ -101,12 +120,29 @@ export function getFolderNote(
 	const fileName = resolveFileName(plugin, folder, file, oldFolderNoteName);
 	if (!fileName) return null;
 
+	const location = storageLocation ?? plugin.settings.storageLocation;
+	let folderObj: TFolder | null = null;
+	const abstractFolder = plugin.app.vault.getAbstractFileByPath(folderPath);
+	if (abstractFolder instanceof TFolder) {
+		folderObj = abstractFolder;
+	}
+
 	adjustFolderPathForStorage(folder, folderPath, plugin, storageLocation);
 
 	const path = buildFullPath(folder, fileName);
 	const primaryType = normalizeFolderNoteType(plugin.settings.folderNoteType);
 
-	return findFolderNoteFile(plugin, path, primaryType);
+	let searchFolderObj: TFolder | undefined = undefined;
+	if (location === 'insideFolder' && folderObj) {
+		searchFolderObj = folderObj;
+	} else if (location === 'parentFolder' && folderObj?.parent) {
+		searchFolderObj = folderObj.parent;
+	} else if (location === 'vaultFolder') {
+		const root = plugin.app.vault.getRoot?.();
+		if (root instanceof TFolder) searchFolderObj = root;
+	}
+
+	return findFolderNoteFile(plugin, path, primaryType, searchFolderObj);
 }
 
 export function getFolder(

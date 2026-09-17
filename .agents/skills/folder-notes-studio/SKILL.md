@@ -17,6 +17,10 @@ description: Authoritative domain blueprint and engineering guide for the Obsidi
 7. **Reactive Zero-Restart Tenet**: All setting modifications must update the live environment dynamically (refreshing DOM classes, rebuilding observers, updating tab titles, re-binding click listeners) without displaying "Requires a restart to take effect" workarounds.
 8. **Baked-In In-Tree Subsystem Architecture**: Submodules (specifically `obsidian-folder-overview`) must be absorbed in-tree as first-class citizens in `src/backend/` and `src/frontend/` with full backwards compatibility for existing `data.json` schemas.
 9. **Efficient Document Indexing & Scanning**: Vault document metadata propagation and indexing must follow high-performance reactive caching and lazy evaluation patterns.
+10. **Collaborative Live Telemetry & Log-Driven Diagnostics**: Maintain structured JSON logging in `.obsidian/plugins/folder-notes/debug.log` and support rapid modal observation capture. All UI bug investigations must begin by tailing and analyzing live telemetry before proposing code changes.
+11. **Strict 3-Zone Click & DOM Invariants**: Differentiate Chevron (`.collapse-icon`), Folder Text (`.tree-item-inner`), and Row Whitespace (`.tree-item-self`). Never call `stopImmediatePropagation()` on whitespace or chevron clicks when collapsing is configured. Never apply `:has()` styling to generic parent tree containers.
+12. **Idempotent Graph View Link Injection & Leaf Lifecycle**: Guard link list file modifications with content-equality checks to prevent infinite re-render loops and graph flickering. Always detach view leaves on `onunload()` and enforce single-instance leaves on view activation.
+13. **Automated Testbed Deployment Pipeline**: All changes must pass `bun test:all`, build cleanly via `bun run package`, and be verified via `bun run testbed:verify` before testing in Obsidian.
 
 ---
 

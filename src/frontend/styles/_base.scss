@@ -4,13 +4,15 @@
 // General States & Utilities
 .hide,
 .hide-folder .folder-name,
-.hide-folder-note .is-folder-note,
+body.hide-folder-note .nav-file.is-folder-note,
+body.hide-folder-note .nav-file:has(> .nav-file-title.is-folder-note),
+body.hide-folder-note .nav-file-title.is-folder-note,
 .hide-folder-note .nav-file.is-folder-note,
-.hide-folder-note .nav-file:has(.is-folder-note),
-.hide-folder-note .tree-item.is-folder-note,
-.hide-folder-note .tree-item:has(.is-folder-note) {
+.hide-folder-note .nav-file:has(> .nav-file-title.is-folder-note),
+.hide-folder-note .nav-file-title.is-folder-note {
   display: none !important;
 }
+
 
 /* make.md plugin integration */
 .hide-folder-note .mk-tree-node > .mk-tree-wrapper > .dropzone > .mk-tree-item.is-folder-note {

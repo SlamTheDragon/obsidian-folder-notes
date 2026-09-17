@@ -34,8 +34,10 @@ import {
 	hideFolderNoteInFileExplorer,
 	showFolderNoteInFileExplorer,
 } from './backend/utils/domUtils';
+import { Logger } from './backend/utils/Logger';
 
 type MarkdownEditorContext = MarkdownView | MarkdownFileInfo;
+
 
 
 export class Commands {
@@ -558,6 +560,7 @@ export class Commands {
 							item.setTitle('Delete folder note');
 							item.setIcon('trash');
 							item.onClick(() => {
+								Logger.getInstance().logInteraction('ContextMenu_DeleteFolderNote', { folder: file.path, folderNote: folderNote.path }, 'Commands.fileMenu');
 								void deleteFolderNote(this.plugin, folderNote, true);
 							});
 						});
@@ -566,6 +569,7 @@ export class Commands {
 							item.setTitle('Open folder note');
 							item.setIcon('chevron-right-square');
 							item.onClick(() => {
+								Logger.getInstance().logInteraction('ContextMenu_OpenFolderNote', { folder: file.path, folderNote: folderNote.path }, 'Commands.fileMenu');
 								void openFolderNote(this.plugin, folderNote);
 							});
 						});
@@ -574,6 +578,7 @@ export class Commands {
 							item.setTitle('Detach folder note');
 							item.setIcon('unlink');
 							item.onClick(() => {
+								Logger.getInstance().logInteraction('ContextMenu_DetachFolderNote', { folder: file.path, folderNote: folderNote.path }, 'Commands.fileMenu');
 								detachFolderNote(this.plugin, folderNote);
 							});
 						});
@@ -582,6 +587,7 @@ export class Commands {
 							item.setTitle('Copy Obsidian URL');
 							item.setIcon('link');
 							item.onClick(() => {
+								Logger.getInstance().logInteraction('ContextMenu_CopyObsidianUrl', { folderNote: folderNote.path }, 'Commands.fileMenu');
 								this.app.copyObsidianUrl(folderNote);
 							});
 						});
@@ -592,6 +598,7 @@ export class Commands {
 									item.setTitle('Hide folder note in explorer');
 									item.setIcon('eye-off');
 									item.onClick(() => {
+										Logger.getInstance().logInteraction('ContextMenu_HideInExplorer', { folder: file.path }, 'Commands.fileMenu');
 										hideFolderNoteInFileExplorer(file.path, this.plugin);
 									});
 								});
@@ -600,6 +607,7 @@ export class Commands {
 									item.setTitle('Show folder note in explorer');
 									item.setIcon('eye');
 									item.onClick(() => {
+										Logger.getInstance().logInteraction('ContextMenu_ShowInExplorer', { folder: file.path }, 'Commands.fileMenu');
 										showFolderNoteInFileExplorer(file.path, this.plugin);
 									});
 								});
@@ -610,6 +618,7 @@ export class Commands {
 							item.setTitle('Create Markdown folder note');
 							item.setIcon('edit');
 							item.onClick(() => {
+								Logger.getInstance().logInteraction('ContextMenu_CreateMarkdownFolderNote', { folder: file.path }, 'Commands.fileMenu');
 								void createFolderNote(this.plugin, file.path, true, '.md');
 							});
 						});
@@ -620,11 +629,13 @@ export class Commands {
 								item.setTitle(`Create ${fileType} folder note`);
 								item.setIcon('edit');
 								item.onClick(() => {
+									Logger.getInstance().logInteraction('ContextMenu_CreateTypedFolderNote', { folder: file.path, fileType }, 'Commands.fileMenu');
 									void createFolderNote(this.plugin, file.path, true, '.' + fileType);
 								});
 							});
 						});
 					}
+
 				};
 
 				if (

@@ -197,43 +197,26 @@ export default class FolderNotesPlugin extends Plugin {
 	}
 
 	addSettingCssClasses(): void {
-		activeDocument.body.classList.add('folder-notes-plugin');
-		if (this.settings.hideFolderNote) { activeDocument.body.classList.add('hide-folder-note'); }
-		if (this.settings.hideCollapsingIconForEmptyFolders) {
-			activeDocument.body.classList.add('fn-hide-empty-collapse-icon');
-		}
-		if (this.settings.hideFolderNoteNameInPath) {
-			activeDocument.body.classList.add('folder-note-hide-name-path');
-		}
-		if (this.settings.underlineFolder) {
-			activeDocument.body.classList.add('folder-note-underline');
-		}
-		if (this.settings.boldName) { activeDocument.body.classList.add('folder-note-bold'); }
-		if (this.settings.cursiveName) { activeDocument.body.classList.add('folder-note-cursive'); }
-		if (this.settings.boldNameInPath) {
-			activeDocument.body.classList.add('folder-note-bold-path');
-		}
-		if (this.settings.cursiveNameInPath) {
-			activeDocument.body.classList.add('folder-note-cursive-path');
-		}
-		if (this.settings.underlineFolderInPath) {
-			activeDocument.body.classList.add('folder-note-underline-path');
-		}
-		if (this.settings.stopWhitespaceCollapsing) {
-			activeDocument.body.classList.add('fn-whitespace-stop-collapsing');
-		}
-		if (this.settings.hideCollapsingIcon) {
-			activeDocument.body.classList.add('fn-hide-collapse-icon');
-		}
-		if (this.settings.ignoreAttachmentFolder) {
-			activeDocument.body.classList.add('fn-ignore-attachment-folder');
-		}
-		if (!this.settings.highlightFolder) {
-			activeDocument.body.classList.add('disable-folder-highlight');
-		}
+		const body = activeDocument?.body ?? document.body;
+		if (!body) return;
+
+		body.classList.add('folder-notes-plugin');
+		body.classList.toggle('hide-folder-note', !!this.settings.hideFolderNote);
+		body.classList.toggle('fn-hide-empty-collapse-icon', !!this.settings.hideCollapsingIconForEmptyFolders);
+		body.classList.toggle('folder-note-hide-name-path', !!this.settings.hideFolderNoteNameInPath);
+		body.classList.toggle('folder-note-underline', !!this.settings.underlineFolder);
+		body.classList.toggle('folder-note-bold', !!this.settings.boldName);
+		body.classList.toggle('folder-note-cursive', !!this.settings.cursiveName);
+		body.classList.toggle('folder-note-bold-path', !!this.settings.boldNameInPath);
+		body.classList.toggle('folder-note-cursive-path', !!this.settings.cursiveNameInPath);
+		body.classList.toggle('folder-note-underline-path', !!this.settings.underlineFolderInPath);
+		body.classList.toggle('fn-whitespace-stop-collapsing', !!this.settings.stopWhitespaceCollapsing);
+		body.classList.toggle('fn-hide-collapse-icon', !!this.settings.hideCollapsingIcon);
+		body.classList.toggle('fn-ignore-attachment-folder', !!this.settings.ignoreAttachmentFolder);
+		body.classList.toggle('disable-folder-highlight', !this.settings.highlightFolder);
 
 		if (requireApiVersion('1.7.2')) {
-			activeDocument.body.classList.add('version-1-7-2');
+			body.classList.add('version-1-7-2');
 		}
 	}
 
@@ -255,6 +238,14 @@ export default class FolderNotesPlugin extends Plugin {
 		this.registerView(FOLDER_OVERVIEW_VIEW, (leaf: WorkspaceLeaf) => {
 			return new FolderOverviewView(leaf, this);
 		});
+
+		// Deduplicate any lingering overview leaves from earlier sessions
+		const overviewLeaves = this.app.workspace.getLeavesOfType(FOLDER_OVERVIEW_VIEW);
+		if (overviewLeaves.length > 1) {
+			for (let i = 1; i < overviewLeaves.length; i++) {
+				overviewLeaves[i].detach();
+			}
+		}
 
 		this.app.workspace.on('layout-change', () => {
 			this.tabManager?.updateTabs();
@@ -458,9 +449,13 @@ export default class FolderNotesPlugin extends Plugin {
 		onlyClickedOnFolderTitle: boolean;
 	} {
 		const folderTitleEl = target.closest('.nav-folder-title');
-		const onlyClickedOnFolderTitle = !!target.closest('.nav-folder-title-content');
+		const isIcon = !!(target.closest('.collapse-icon') || target.closest('.nav-folder-collapse-indicator') || target.closest('.tree-item-icon'));
+		const onlyClickedOnFolderTitle = !isIcon && !!(
+			target.closest('.nav-folder-title-content') ||
+			target.closest('.tree-item-inner')
+		);
 		return {
-			folderTitleEl: folderTitleEl?.instanceOf(HTMLElement) ? folderTitleEl : null,
+			folderTitleEl: folderTitleEl instanceof HTMLElement ? folderTitleEl : null,
 			onlyClickedOnFolderTitle,
 		};
 	}
@@ -469,10 +464,15 @@ export default class FolderNotesPlugin extends Plugin {
 		target: HTMLElement,
 		onlyClickedOnFolderTitle: boolean,
 	): boolean {
-		if (!this.settings.stopWhitespaceCollapsing && !onlyClickedOnFolderTitle) return true;
-		if (target.closest('.collapse-icon')) return true;
+		if (target.closest('.collapse-icon') || target.closest('.nav-folder-collapse-indicator') || target.closest('.tree-item-icon')) {
+			return true;
+		}
+		if (!this.settings.stopWhitespaceCollapsing && !onlyClickedOnFolderTitle) {
+			return true;
+		}
 		return false;
 	}
+
 
 	private getValidFolderPath(folderTitleEl: HTMLElement): string | null {
 		const folderPath = folderTitleEl.getAttribute('data-path');
@@ -512,12 +512,19 @@ export default class FolderNotesPlugin extends Plugin {
 
 		if (leaves.length > 0) {
 			leaf = leaves[0];
+			for (let i = 1; i < leaves.length; i++) {
+				leaves[i].detach();
+			}
 		} else {
 			leaf = workspace.getRightLeaf(false);
 			await leaf?.setViewState({ type: FOLDER_OVERVIEW_VIEW, active: true });
 		}
 
 		if (!leaf) return;
+		if (leaf.view instanceof FolderOverviewView) {
+			leaf.view.activeFile = this.app.workspace.getActiveFile();
+			await leaf.view.reloadAndDisplay();
+		}
 		void workspace.revealLeaf(leaf);
 	}
 
@@ -627,6 +634,7 @@ export default class FolderNotesPlugin extends Plugin {
 
 	onunload(): void {
 		unregisterFileExplorerObserver();
+		this.app.workspace.detachLeavesOfType(FOLDER_OVERVIEW_VIEW);
 
 		// Clean up all 15 injected CSS classes
 		const classList = [
@@ -699,6 +707,7 @@ export default class FolderNotesPlugin extends Plugin {
 
 	async saveSettings(reloadStyles?: boolean): Promise<void> {
 		await this.saveData(this.settings);
+		this.addSettingCssClasses();
 		if ((!this.settingsOpened || reloadStyles === true) && reloadStyles !== false) {
 			refreshAllFolderStyles(true, this);
 		}

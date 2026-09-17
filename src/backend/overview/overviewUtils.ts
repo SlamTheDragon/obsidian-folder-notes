@@ -36,7 +36,14 @@ export function resolveSourceFolder(
 	if (spec === 'Path of folder linked to the file') {
 		if (!sourceFile) return null;
 		const linkedFolder = getFolder(plugin, sourceFile);
-		return linkedFolder instanceof TFolder ? linkedFolder : null;
+		if (linkedFolder instanceof TFolder) return linkedFolder;
+		// Fallback to parent folder if sourceFile is not yet named as a linked folder note
+		const parentPath = getFolderPathFromString(sourceFile.path);
+		if (parentPath === '/' || parentPath === '') {
+			return plugin.app.vault.getRoot();
+		}
+		const folder = plugin.app.vault.getAbstractFileByPath(parentPath);
+		return folder instanceof TFolder ? folder : null;
 	}
 	if (spec === '/') {
 		return plugin.app.vault.getRoot();
@@ -145,8 +152,8 @@ export function getYamlBlocks(text: string, callout: boolean): RegExpMatchArray 
 		: text.match(/^(?!>).*```folder-overview\r?\n(?:^(?!>).*[\r\n]*)*?^```$/gm);
 }
 
-export function cleanYamlBlock(block: string, calloutFlag: boolean): string {
-	if (calloutFlag) {
+export function cleanYamlBlock(block: string, callout: boolean): string {
+	if (callout) {
 		const cleaned = block.replace(/^>\s*```folder-overview\r?\n/, '').replace(/```$/, '');
 		return cleaned.replace(/^>\s?/gm, '');
 	}
@@ -192,7 +199,8 @@ export async function updateYamlById(
 
 				let newBlock = buildNewBlock(stringYaml, isCallout);
 
-				if (addLinkList) {
+				const hasExistingLinkList = updatedText.includes(`class="fv-link-list-start" id="${newYaml.id}"`);
+				if (addLinkList && !hasExistingLinkList) {
 					newBlock += buildLinkListBlock(newYaml.id, isCallout);
 				}
 

@@ -52,15 +52,19 @@ export async function updateLinkList(
 			return text;
 		}
 
-		lines.splice(startIdx, endIdx - startIdx + 1);
-
-		const newBlock = [
+		const existingBlock = lines.slice(startIdx, endIdx + 1).join('\n');
+		const newBlockLines = [
 			startMarker,
 			...fileLinks,
 			endMarker,
 		];
-		lines.splice(startIdx, 0, ...newBlock);
+		const newBlock = newBlockLines.join('\n');
 
+		if (existingBlock === newBlock) {
+			return text;
+		}
+
+		lines.splice(startIdx, endIdx - startIdx + 1, ...newBlockLines);
 		return lines.join('\n');
 	});
 }

@@ -7,6 +7,8 @@ import {
 	addCSSClassToFileExplorerEl,
 	removeCSSClassFromFileExplorerEL,
 } from '../utils/domUtils';
+import { Logger } from '../utils/Logger';
+
 
 export async function handleViewHeaderClick(
 	event: MouseEvent,
@@ -18,8 +20,15 @@ export async function handleViewHeaderClick(
 	event.stopPropagation();
 	if (!(event.target instanceof HTMLElement)) return;
 
-	const folderPath = event.target.getAttribute('data-path');
+	const folderPath = event.target.getAttribute('data-path') || (event.target as HTMLElement).closest('[data-path]')?.getAttribute('data-path');
 	if (!folderPath) { return; }
+
+	Logger.getInstance().logInteraction('BreadcrumbHeaderClick', {
+		folderPath,
+		altKey: event.altKey,
+		ctrlKey: event.ctrlKey || event.metaKey,
+	}, 'handleViewHeaderClick');
+
 
 	if (await isExcludedFolder(event, plugin, folderPath)) return;
 
@@ -35,6 +44,7 @@ export async function handleViewHeaderClick(
 	(event.target as HTMLElement).onclick = null;
 	(event.target as HTMLElement).click();
 }
+
 
 export async function isExcludedFolder(
 	event: MouseEvent,

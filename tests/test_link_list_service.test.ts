@@ -113,4 +113,72 @@ describe('LinkListService Formatting & AST Safety', () => {
 		expect(links[0]).toContain('<span class="fv-link-list-item"></span>');
 	});
 
+	it('updates link list between markers without modifying text when content is identical', async () => {
+		const { updateLinkList } = await import('../src/backend/overview/LinkListService');
+		let processCalled = false;
+		let resultingText = '';
+		const mockApp: any = {
+			vault: {
+				process: async (file: TFile, fn: (text: string) => string) => {
+					processCalled = true;
+					const initialText = `# Header\n<span class="fv-link-list-start" id="uuid-x"></span>\n- [[Projects/Task A|Task A]]\n<span class="fv-link-list-end" id="uuid-x"></span>\nFooter`;
+					resultingText = fn(initialText);
+					return resultingText;
+				},
+			},
+		};
+		const customMockPlugin: any = {
+			...mockPlugin,
+			app: mockApp,
+		};
+		const yaml: defaultOverviewSettings = {
+			id: 'uuid-x',
+			folderPath: 'Projects',
+			depth: 1,
+			useWikilinks: true,
+			hideLinkList: false,
+			isInCallout: false,
+			includeTypes: ['markdown'],
+			sortBy: 'name',
+			sortByAsc: true,
+		} as defaultOverviewSettings;
+
+		await updateLinkList([fileA], customMockPlugin, yaml, [], overviewNote);
+		expect(processCalled).toBe(true);
+		expect(resultingText).toContain('- [[Projects/Task A|Task A]]');
+		expect(resultingText).toContain('<span class="fv-link-list-start" id="uuid-x"></span>');
+		expect(resultingText).toContain('<span class="fv-link-list-end" id="uuid-x"></span>');
+	});
+
+	it('falls back to parent folder when folderPath is set to linked folder placeholder but note is not yet named as folder note', async () => {
+		const { resolveSourceFolder } = await import('../src/backend/overview/overviewUtils');
+		const parentFolder = new TFolder();
+		parentFolder.path = 'Projects';
+		parentFolder.name = 'Projects';
+
+		const fallbackPlugin: any = {
+			settings: {
+				folderNoteName: '{{folder_name}} - Index',
+				storageLocation: 'insideFolder',
+			},
+			app: {
+				vault: {
+					getAbstractFileByPath: (path: string) => {
+						if (path === 'Projects') return parentFolder;
+						return null;
+					},
+					getRoot: () => new TFolder(),
+				},
+			},
+		};
+
+		const testNote = new TFile();
+		testNote.name = 'Untitled.md';
+		testNote.basename = 'Untitled';
+		testNote.path = 'Projects/Untitled.md';
+
+		const resolved = resolveSourceFolder(fallbackPlugin, 'Path of folder linked to the file', testNote);
+		expect(resolved).not.toBeNull();
+		expect(resolved?.path).toBe('Projects');
+	});
 });

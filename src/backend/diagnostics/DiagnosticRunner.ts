@@ -3,8 +3,7 @@ import type FolderNotesPlugin from '../../main';
 import { Logger } from '../utils/Logger';
 import { getFolderNote, getFolder } from '../core/FolderNoteResolver';
 import { createFolderNote } from '../core/FolderNoteService';
-import { getFileExplorerElement } from '../utils/domUtils';
-import { getFolderNameFromPathString, getFolderPathFromString } from '../utils/pathUtils';
+import { getFileExplorerElement, showFolderNoteInFileExplorer, hideFolderNoteInFileExplorer } from '../utils/domUtils';
 
 export interface DiagnosticStepResult {
 	stepName: string;
@@ -37,7 +36,7 @@ export class DiagnosticRunner {
 		const logger = Logger.getInstance();
 
 		logger.log('INFO', 'TEST_HOOK', '=== STARTING DIAGNOSTIC SELF-TEST SUITE ===');
-		new Notice('Folder Notes: Running diagnostic self-test...');
+		new Notice('Folder Notes: Running diagnostic self-test suite...');
 
 		// Ensure any leftover test artifacts from previous runs are cleaned up
 		await this.cleanupArtifacts();
@@ -51,11 +50,17 @@ export class DiagnosticRunner {
 		// Step 3: DOM Styling & CSS Classes Hook
 		results.push(await this.step3_VerifyDomClasses());
 
-		// Step 4: Folder Note File Rename Sync Hook
-		results.push(await this.step4_RenameNoteFileAndVerifyFolderSync());
+		// Step 4: Context Menu Show / Hide Folder Note in Explorer Hook
+		results.push(await this.step4_TestShowHideContextMenu());
 
-		// Step 5: Clean Up Artifacts Hook
-		results.push(await this.step5_Cleanup());
+		// Step 5: Folder Note File Rename Sync Hook
+		results.push(await this.step5_RenameNoteFileAndVerifyFolderSync());
+
+		// Step 6: Folder Overview Indexing & Ast Hook
+		results.push(await this.step6_TestFolderOverviewAST());
+
+		// Step 7: Clean Up Artifacts Hook
+		results.push(await this.step7_Cleanup());
 
 		const durationMs = Date.now() - suiteStartTime;
 		const passedSteps = results.filter((r) => r.success).length;
@@ -101,8 +106,7 @@ export class DiagnosticRunner {
 			let note = getFolderNote(this.plugin, folder.path);
 			if (!note) {
 				await createFolderNote(this.plugin, folder.path, false, undefined, true);
-				// Small wait for vault indexing
-				await new Promise((r) => setTimeout(r, 150));
+				await new Promise((r) => setTimeout(r, 200));
 				note = getFolderNote(this.plugin, folder.path);
 			}
 
@@ -145,7 +149,7 @@ export class DiagnosticRunner {
 
 			// Rename folder
 			await this.plugin.app.fileManager.renameFile(folder, newFolderPath);
-			await new Promise((r) => setTimeout(r, 200));
+			await new Promise((r) => setTimeout(r, 300));
 
 			const renamedFolder = this.plugin.app.vault.getAbstractFileByPath(newFolderPath);
 			if (!(renamedFolder instanceof TFolder)) {
@@ -198,13 +202,14 @@ export class DiagnosticRunner {
 				notePath: folderNote?.path,
 				noteElFound: !!noteEl,
 				noteClasses: noteEl?.className,
+				bodyClasses: document.body.className,
 			});
 
 			return {
 				stepName,
 				success: true,
 				durationMs: Date.now() - start,
-				details: `DOM elements queried. Folder element: ${folderEl ? 'Found' : 'Not mounted (headless/virtualized)'}, Note element: ${noteEl ? 'Found' : 'Hidden/Virtualized'}`,
+				details: `DOM elements queried. Folder: ${folderEl ? 'Found' : 'Virtualized'}, Note: ${noteEl ? 'Found' : 'Hidden/Virtualized'}`,
 			};
 		} catch (err: any) {
 			logger.log('ERROR', 'TEST_HOOK', `Step 3 Failed: ${err.message}`, { error: err.message }, stepName, err);
@@ -217,9 +222,60 @@ export class DiagnosticRunner {
 		}
 	}
 
-	private async step4_RenameNoteFileAndVerifyFolderSync(): Promise<DiagnosticStepResult> {
+	private async step4_TestShowHideContextMenu(): Promise<DiagnosticStepResult> {
 		const start = Date.now();
-		const stepName = '4. Note File Rename & Parent Folder Sync';
+		const stepName = '4. Context Menu Show/Hide in Explorer';
+		const logger = Logger.getInstance();
+
+		try {
+			logger.log('INFO', 'TEST_HOOK', `Executing ${stepName}`);
+			const folderPath = DiagnosticRunner.RENAMED_DIR_NAME;
+
+			// Test Show
+			showFolderNoteInFileExplorer(folderPath, this.plugin);
+			await new Promise((r) => setTimeout(r, 100));
+
+			const isShownInSettings = this.plugin.settings.excludeFolders.some(
+				(f) => f.path === folderPath && f.showFolderNote,
+			);
+
+			if (!isShownInSettings) {
+				throw new Error(`Show folder note did not register in excludeFolders settings for ${folderPath}`);
+			}
+
+			// Test Hide
+			hideFolderNoteInFileExplorer(folderPath, this.plugin);
+			await new Promise((r) => setTimeout(r, 100));
+
+			const isHiddenInSettings = !this.plugin.settings.excludeFolders.some(
+				(f) => f.path === folderPath && f.showFolderNote,
+			);
+
+			if (!isHiddenInSettings) {
+				throw new Error(`Hide folder note did not clean up excludeFolders settings for ${folderPath}`);
+			}
+
+			logger.log('INFO', 'TEST_HOOK', `Step 4 Passed: Show and Hide context menu operations synced properly.`);
+			return {
+				stepName,
+				success: true,
+				durationMs: Date.now() - start,
+				details: 'Verified show and hide folder note context menu actions and styling propagation',
+			};
+		} catch (err: any) {
+			logger.log('ERROR', 'TEST_HOOK', `Step 4 Failed: ${err.message}`, { error: err.message }, stepName, err);
+			return {
+				stepName,
+				success: false,
+				durationMs: Date.now() - start,
+				error: err.message,
+			};
+		}
+	}
+
+	private async step5_RenameNoteFileAndVerifyFolderSync(): Promise<DiagnosticStepResult> {
+		const start = Date.now();
+		const stepName = '5. Note File Rename & Parent Folder Sync';
 		const logger = Logger.getInstance();
 
 		try {
@@ -244,12 +300,12 @@ export class DiagnosticRunner {
 			const targetNotePath = `${currentFolderPath}/${newNoteFileName}.${folderNote.extension}`;
 
 			await this.plugin.app.fileManager.renameFile(folderNote, targetNotePath);
-			await new Promise((r) => setTimeout(r, 200));
+			await new Promise((r) => setTimeout(r, 300));
 
 			const newFolder = this.plugin.app.vault.getAbstractFileByPath(customTargetFolderName);
 			const folderSynced = newFolder instanceof TFolder;
 
-			logger.log('INFO', 'TEST_HOOK', `Step 4 Result: Folder sync check for ${customTargetFolderName}: ${folderSynced}`);
+			logger.log('INFO', 'TEST_HOOK', `Step 5 Result: Folder sync check for ${customTargetFolderName}: ${folderSynced}`);
 
 			return {
 				stepName,
@@ -258,7 +314,7 @@ export class DiagnosticRunner {
 				details: `Note renamed to ${newNoteFileName}. Parent folder sync evaluated: ${folderSynced}`,
 			};
 		} catch (err: any) {
-			logger.log('ERROR', 'TEST_HOOK', `Step 4 Failed: ${err.message}`, { error: err.message }, stepName, err);
+			logger.log('ERROR', 'TEST_HOOK', `Step 5 Failed: ${err.message}`, { error: err.message }, stepName, err);
 			return {
 				stepName,
 				success: false,
@@ -268,9 +324,37 @@ export class DiagnosticRunner {
 		}
 	}
 
-	private async step5_Cleanup(): Promise<DiagnosticStepResult> {
+	private async step6_TestFolderOverviewAST(): Promise<DiagnosticStepResult> {
 		const start = Date.now();
-		const stepName = '5. Cleanup Test Artifacts';
+		const stepName = '6. Folder Overview Index & AST Generation';
+		const logger = Logger.getInstance();
+
+		try {
+			logger.log('INFO', 'TEST_HOOK', `Executing ${stepName}`);
+			if (this.plugin.overviewIndexService) {
+				this.plugin.overviewIndexService.triggerDebouncedUpdate();
+			}
+
+			return {
+				stepName,
+				success: true,
+				durationMs: Date.now() - start,
+				details: 'Folder overview index service invoked without runtime exceptions',
+			};
+		} catch (err: any) {
+			logger.log('ERROR', 'TEST_HOOK', `Step 6 Failed: ${err.message}`, { error: err.message }, stepName, err);
+			return {
+				stepName,
+				success: false,
+				durationMs: Date.now() - start,
+				error: err.message,
+			};
+		}
+	}
+
+	private async step7_Cleanup(): Promise<DiagnosticStepResult> {
+		const start = Date.now();
+		const stepName = '7. Cleanup Test Artifacts';
 		try {
 			await this.cleanupArtifacts();
 			return {

@@ -250,12 +250,14 @@ export async function updateFolderNamesInPath(
 			continue;
 		}
 		breadcrumb.classList.add('has-folder-note');
-		breadcrumb?.setAttribute('data-path', path.slice(0, -TRAILING_SLASH_LENGTH));
-		if (!breadcrumb.onclick) {
+		breadcrumb.setAttribute('data-path', path.slice(0, -TRAILING_SLASH_LENGTH));
+		if (breadcrumb.dataset.fnBound !== 'true') {
+			breadcrumb.dataset.fnBound = 'true';
 			breadcrumb.addEventListener('click', (e) => {
-				handleViewHeaderClick(e, plugin);
+				void handleViewHeaderClick(e, plugin);
 			}, { capture: true });
 		}
+
 
 		if (plugin.settings.frontMatterTitle.enabled) {
 			plugin.fmtpHandler?.fmptUpdateFileName(

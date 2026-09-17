@@ -275,31 +275,22 @@ function handleFileRename(file: TFile, oldPath: string, plugin: FolderNotesPlugi
 	const excludedFolder = getExcludedFolder(plugin, folder.path);
 	if (excludedFolder?.detached) { return; }
 
-	if (plugin.settings.syncFolderName && !excludedFolder?.disableSync) {
+	const newFolderName = extractFolderName(plugin.settings.folderNoteName, file.basename);
+
+	if (plugin.settings.syncFolderName && !excludedFolder?.disableSync && newFolderName && newFolderName !== folder.name) {
 		renameFolder(plugin, file, folder, oldFile);
 	} else {
-		const oldFolderName = extractFolderName(plugin.settings.folderNoteName, oldFile.basename);
-		if (oldFolderName === folder.name) {
-			unmarkFileAsFolderNote(file, plugin);
-			unmarkFolderAsFolderNote(folder, plugin);
-			const newFolder = new ExcludedFolder(
-				folder.path,
-				plugin.settings.excludeFolders.length,
-				undefined,
-				plugin,
-			);
-			newFolder.showFolderNote = true;
-			newFolder.hideInSettings = true;
-			newFolder.disableFolderNote = true;
-			newFolder.disableSync = true;
-			newFolder.subFolders = false;
-			newFolder.excludeFromFolderOverview = false;
-			newFolder.detached = true;
-			newFolder.detachedFilePath = file.path;
-			addExcludedFolder(plugin, newFolder);
-		}
+		unmarkFileAsFolderNote(file, plugin);
+		void updateCSSClassesForFolder(folder.path, plugin);
+		Logger.getInstance().log('INFO', 'VAULT_SYNC', 'Note file renamed; updated folder styling', {
+			oldPath,
+			newPath: file.path,
+			folder: folder.path,
+			matchesTemplate: !!newFolderName,
+		}, 'handleFileRename');
 	}
 }
+
 
 function handleFolderRename(folder: TFolder, oldPath: string, plugin: FolderNotesPlugin): void {
 	const logger = Logger.getInstance();
@@ -330,8 +321,18 @@ function handleFolderRename(folder: TFolder, oldPath: string, plugin: FolderNote
 		? oldNoteBaseName
 		: `${searchDir}/${oldNoteBaseName}`;
 
+	let searchFolderObj: TFolder | undefined = undefined;
+	if (plugin.settings.storageLocation === 'insideFolder') {
+		searchFolderObj = folder;
+	} else if (plugin.settings.storageLocation === 'parentFolder' && folder.parent) {
+		searchFolderObj = folder.parent;
+	} else if (plugin.settings.storageLocation === 'vaultFolder') {
+		const root = plugin.app.vault.getRoot?.();
+		if (root instanceof TFolder) searchFolderObj = root;
+	}
+
 	const primaryType = normalizeFolderNoteType(plugin.settings.folderNoteType);
-	const oldFolderNote = findFolderNoteFile(plugin, oldNotePathWithoutExt, primaryType);
+	const oldFolderNote = findFolderNoteFile(plugin, oldNotePathWithoutExt, primaryType, searchFolderObj);
 
 	if (!oldFolderNote) {
 		logger.log('WARN', 'VAULT_SYNC', `Old folder note not found on folder rename from "${oldPath}" to "${folder.path}"`, {
@@ -339,6 +340,7 @@ function handleFolderRename(folder: TFolder, oldPath: string, plugin: FolderNote
 			oldNoteBaseName,
 			oldNotePathWithoutExt,
 			storageLocation: plugin.settings.storageLocation,
+			searchFolderChildren: searchFolderObj?.children?.map(c => c.name),
 		}, 'handleFolderRename');
 		return;
 	}

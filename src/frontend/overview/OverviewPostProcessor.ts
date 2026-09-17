@@ -261,7 +261,7 @@ export class FolderOverviewComponent {
 		if (this.yaml.useActualLinks) {
 			setTimeout(() => {
 				if (this.sourceFile instanceof TFile && this.sourceFolder) {
-					const files = this.sourceFolder.path === '/'
+					const files = (this.sourceFolder.path === '/' || this.sourceFolder.isRoot?.())
 						? this.plugin.app.vault.getAllLoadedFiles().filter((f) => f.parent?.path === '/' || !f.path.includes('/'))
 						: this.sourceFolder.children;
 					void updateLinkList(
@@ -273,8 +273,6 @@ export class FolderOverviewComponent {
 					);
 				}
 			}, this.LINK_LIST_UPDATE_DELAY_MS);
-		} else {
-			void removeLinkList(this.plugin, this.sourceFile, this.yaml);
 		}
 	}
 

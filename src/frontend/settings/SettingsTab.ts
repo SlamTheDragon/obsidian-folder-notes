@@ -7,9 +7,9 @@ import {
 	type MarkdownPostProcessorContext,
 } from 'obsidian';
 import type FolderNotesPlugin from '../../main';
-import type { ExcludedFolder } from '../../ExcludeFolders/ExcludeFolder';
+import type { ExcludedFolder } from '../../backend/types/exclude';
 import { extractFolderName, getFolderNote } from '../../backend/core/FolderNoteResolver';
-import type { defaultOverviewSettings } from '../../obsidian-folder-overview/src/FolderOverview';
+import type { defaultOverviewSettings } from '../../backend/types/overview';
 import { renderGeneral } from './GeneralSettingsSection';
 import { renderFileExplorer } from './FileExplorerSettingsSection';
 import { renderPath } from './PathSettingsSection';

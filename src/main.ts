@@ -1,44 +1,57 @@
 import {
-	type App, type TAbstractFile,
+	type App,
+	type TAbstractFile,
 	type MarkdownPostProcessorContext,
 	type WorkspaceLeaf,
-	Plugin, TFile, TFolder,
-	parseYaml, Notice, Keymap,
-	requireApiVersion, Platform, debounce,
+	Plugin,
+	TFile,
+	TFolder,
+	parseYaml,
+	Notice,
+	Keymap,
+	requireApiVersion,
+	Platform,
 } from 'obsidian';
 import {
-	type FolderNotesSettings, DEFAULT_SETTINGS,
+	type FolderNotesSettings,
+	DEFAULT_SETTINGS,
+	type LegacySettingsData,
 } from './backend/types/settings';
 import { SettingsTab } from './frontend/settings/SettingsTab';
-import { FolderOverview, type defaultOverviewSettings } from './obsidian-folder-overview/src/FolderOverview';
 import { Commands } from './Commands';
 import type { FileExplorerWorkspaceLeaf } from './globals';
 import {
-	registerFileExplorerObserver, unregisterFileExplorerObserver,
+	registerFileExplorerObserver,
+	unregisterFileExplorerObserver,
 } from './backend/events/FileExplorerObserver';
 import {
-	handleRename, handleCreate, handleDelete,
+	handleRename,
+	handleCreate,
+	handleDelete,
 } from './backend/events/VaultSyncHandler';
 import {
-	getFolderNote, getFolder,
+	getFolderNote,
+	getFolder,
 } from './backend/core/FolderNoteResolver';
 import {
-	openFolderNote, createFolderNote,
+	openFolderNote,
+	createFolderNote,
 } from './backend/core/FolderNoteService';
 import { FrontMatterTitlePluginHandler } from './backend/events/FrontMatterTitle';
-import { FolderOverviewSettings } from './obsidian-folder-overview/src/modals/Settings';
 import { TabManager } from './backend/events/TabManager';
 import {
-	addCSSClassToFileExplorerEl, getFileExplorerElement, removeCSSClassFromFileExplorerEL,
-	refreshAllFolderStyles, setActiveFolder, removeActiveFolder,
+	addCSSClassToFileExplorerEl,
+	getFileExplorerElement,
+	removeCSSClassFromFileExplorerEL,
+	refreshAllFolderStyles,
+	setActiveFolder,
+	removeActiveFolder,
 } from './backend/utils/domUtils';
 import { getExcludedFolder } from './backend/core/ExcludeService';
 import { getFileExplorer } from './backend/utils/pathUtils';
-import { FOLDER_OVERVIEW_VIEW, FolderOverviewView } from './obsidian-folder-overview/src/view';
-import { registerOverviewCommands } from './obsidian-folder-overview/src/Commands';
-import { updateOverviewView, updateViewDropdown } from './obsidian-folder-overview/src/main';
-import { FvIndexDB } from './obsidian-folder-overview/src/utils/IndexDB';
-import { updateAllOverviews } from './obsidian-folder-overview/src/utils/functions';
+import { FOLDER_OVERVIEW_VIEW, FolderOverviewView } from './frontend/views/FolderOverviewView';
+import { OverviewIndexService } from './backend/overview/OverviewIndexService';
+import { registerOverviewPostProcessor } from './frontend/overview/OverviewPostProcessor';
 
 interface FileExplorerPluginLike extends Plugin {
 	revealInFolder: (file: TAbstractFile) => void;
@@ -73,11 +86,6 @@ interface ActiveEditorLike {
 	editMode?: EditModeLike;
 }
 
-type LegacySettingsData = Partial<FolderNotesSettings> & {
-	allowWhitespaceCollapsing?: boolean;
-	defaultOverview?: defaultOverviewSettings;
-};
-
 export default class FolderNotesPlugin extends Plugin {
 	settings!: FolderNotesSettings;
 	settingsTab!: SettingsTab;
@@ -90,7 +98,12 @@ export default class FolderNotesPlugin extends Plugin {
 	tabManager!: TabManager;
 	settingsOpened = false;
 	askModalCurrentlyOpen = false;
-	fvIndexDB!: FvIndexDB;
+	overviewIndexService!: OverviewIndexService;
+
+	private originalRevealInFolder?: (file: TAbstractFile) => void;
+	private originalClipboardProto?: ClipboardManagerLike;
+	private originalHandleDragOver?: ClipboardManagerLike['handleDragOver'];
+	private originalHandleDrop?: ClipboardManagerLike['handleDrop'];
 
 	async onload(): Promise<void> {
 		console.debug('loading folder notes plugin');
@@ -98,13 +111,13 @@ export default class FolderNotesPlugin extends Plugin {
 		this.settingsTab = new SettingsTab(this.app, this);
 		this.addSettingTab(this.settingsTab);
 		await this.saveSettings();
-		this.fvIndexDB = new FvIndexDB(this);
+
+		this.overviewIndexService = new OverviewIndexService(this);
 
 		// Add CSS Classes
 		this.addSettingCssClasses();
 
 		new Commands(this.app, this).registerCommands();
-		registerOverviewCommands(this);
 
 		this.app.workspace.onLayoutReady(() => this.onLayoutReady());
 
@@ -162,20 +175,23 @@ export default class FolderNotesPlugin extends Plugin {
 
 		this.registerEvent(this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
 			handleRename(file, oldPath, this);
+			this.overviewIndexService?.handleRename(oldPath, file.path);
 			this.handleVaultChange();
 		}));
 
 		this.registerEvent(this.app.vault.on('delete', (file: TAbstractFile) => {
 			handleDelete(file, this);
+			this.overviewIndexService?.handleDelete(file.path);
 			this.handleVaultChange();
 		}));
 
-		this.registerMarkdownCodeBlockProcessor(
-			'folder-overview',
-			(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-				this.handleOverviewBlock(source, el, ctx);
-			},
-		);
+		this.registerEvent(this.app.vault.on('modify', (file: TAbstractFile) => {
+			if (file instanceof TFile) {
+				void this.overviewIndexService?.handleFileModify(file);
+			}
+		}));
+
+		registerOverviewPostProcessor(this);
 	}
 
 	addSettingCssClasses(): void {
@@ -231,7 +247,6 @@ export default class FolderNotesPlugin extends Plugin {
 
 		if (infinityScroll) {
 			// increase infinity scroll buffer to show hidden folder notes
-			// Issue: https://github.com/LostPaul/obsidian-folder-notes/issues/274
 			infinityScroll.rootMargin = 1.5;
 		}
 
@@ -240,7 +255,7 @@ export default class FolderNotesPlugin extends Plugin {
 		});
 
 		this.app.workspace.on('layout-change', () => {
-			this.tabManager.updateTabs();
+			this.tabManager?.updateTabs();
 		});
 
 		if (this.app.plugins.getPlugin('obsidian-front-matter-title-plugin')) {
@@ -263,16 +278,17 @@ export default class FolderNotesPlugin extends Plugin {
 		const fileExplorerPlugin = this.app.internalPlugins.getEnabledPluginById('file-explorer');
 		if (fileExplorerPlugin) {
 			const fileExplorerInstance = fileExplorerPlugin as unknown as FileExplorerPluginLike;
-			const originalRevealInFolder =
+			this.originalRevealInFolder =
 				(fileExplorerInstance.revealInFolder as unknown as FileExplorerPluginLike['revealInFolder'])
 					.bind(fileExplorerInstance);
+			const orig = this.originalRevealInFolder;
 			fileExplorerInstance.revealInFolder = (file: TAbstractFile): void => {
 				if (file instanceof TFile) {
 					const folder = getFolder(this, file);
 					if (folder instanceof TFolder) {
 						const folderNote = getFolderNote(this, folder.path);
 						if (!folderNote || folderNote.path !== file.path) {
-							originalRevealInFolder(file);
+							orig(file);
 							return;
 						}
 						const excludedFolder = getExcludedFolder(this, folder.path, true);
@@ -281,17 +297,16 @@ export default class FolderNotesPlugin extends Plugin {
 							excludedFolder?.showFolderNote ||
 							excludedFolder?.disableFolderNote
 						) {
-							originalRevealInFolder(file);
+							orig(file);
 							return;
 						}
-						originalRevealInFolder(folder);
+						orig(folder);
 						return;
 					}
 				}
 				if (file instanceof TFolder || file instanceof TFile) {
-					originalRevealInFolder(file);
+					orig(file);
 					return;
-
 				}
 			};
 		}
@@ -299,57 +314,59 @@ export default class FolderNotesPlugin extends Plugin {
 		const leaf = this.app.workspace.getLeavesOfType('markdown').first();
 		const view = leaf?.view;
 
-		if (!view) { return; }
+		if (view) {
+			const viewWithEditModes = view as ViewWithEditModes;
+			const activeEditor = this.app.workspace.activeEditor as ActiveEditorLike | undefined;
+			const editMode = viewWithEditModes.editMode ?? viewWithEditModes.sourceMode
+				?? activeEditor?.editMode;
 
-		const viewWithEditModes = view as ViewWithEditModes;
-		const activeEditor = this.app.workspace.activeEditor as ActiveEditorLike | undefined;
-		const editMode = viewWithEditModes.editMode ?? viewWithEditModes.sourceMode
-			?? activeEditor?.editMode;
+			if (editMode) {
+				const { clipboardManager } = editMode;
+				const clipboardProto = Object.getPrototypeOf(clipboardManager) as ClipboardManagerLike;
+				this.originalClipboardProto = clipboardProto;
+				this.originalHandleDragOver = clipboardProto.handleDragOver;
+				this.originalHandleDrop = clipboardProto.handleDrop;
 
-		if (!editMode) { return; }
+				const folderNotePlugin = this;
+				const origDragOver = this.originalHandleDragOver;
+				const origDrop = this.originalHandleDrop;
 
-		const { clipboardManager } = editMode;
-		const clipboardProto = Object.getPrototypeOf(clipboardManager) as ClipboardManagerLike;
+				clipboardProto.handleDragOver = function (evt: DragEvent, ...args: unknown[]): void {
+					const { dragManager } = (this as ClipboardManagerLike).app;
+					const draggable = dragManager?.draggable;
 
-		const originalHandleDragOver =
-			clipboardProto.handleDragOver as unknown as ClipboardManagerLike['handleDragOver'];
-		const originalHandleDrop =
-			clipboardProto.handleDrop as unknown as ClipboardManagerLike['handleDrop'];
-		const folderNotePlugin = this;
-		clipboardProto.handleDragOver = function (evt: DragEvent, ...args: unknown[]): void {
-			const { dragManager } = (this as ClipboardManagerLike).app;
-			const draggable = dragManager?.draggable;
+					if (draggable?.file instanceof TFolder) {
+						const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
+						if (folderNote) {
+							dragManager.setAction(
+								window.i18next?.t('interface.drag-and-drop.insert-link-here') ?? 'Insert link here',
+							);
+							return;
+						}
+					}
 
-			if (draggable?.file instanceof TFolder) {
-				const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
-				if (folderNote) {
-					dragManager.setAction(
-						window.i18next.t('interface.drag-and-drop.insert-link-here'),
-					);
-					return;
-				}
+					return origDragOver.call(this, evt, ...args);
+				};
+
+				clipboardProto.handleDrop = function (evt: DragEvent, ...args: unknown[]): void {
+					const { dragManager } = (this as ClipboardManagerLike).app;
+					const draggable = dragManager?.draggable;
+
+					if (draggable?.file instanceof TFolder) {
+						const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
+						if (folderNote) {
+							draggable.file = folderNote;
+							draggable.type = 'file';
+						}
+					}
+
+					return origDrop.call(this, evt, ...args);
+				};
 			}
-
-			return originalHandleDragOver.call(this, evt, ...args);
-		};
-
-		clipboardProto.handleDrop = function (evt: DragEvent, ...args: unknown[]): void {
-			const { dragManager } = (this as ClipboardManagerLike).app;
-			const draggable = dragManager?.draggable;
-
-			if (draggable?.file instanceof TFolder) {
-				const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
-				if (folderNote) {
-					draggable.file = folderNote;
-					draggable.type = 'file';
-				}
-			}
-
-			return originalHandleDrop.call(this, evt, ...args);
-		};
+		}
 
 		if (this.settings.fvGlobalSettings.autoUpdateLinks) {
-			this.fvIndexDB.init(false);
+			void this.overviewIndexService.init(false);
 		}
 	}
 
@@ -389,10 +406,7 @@ export default class FolderNotesPlugin extends Plugin {
 
 	handleVaultChange(): void {
 		if (!this.settings.fvGlobalSettings.autoUpdateLinks) return;
-		const DEBOUNCE_DELAY = 2000;
-		debounce(() => {
-			void updateAllOverviews(this);
-		}, DEBOUNCE_DELAY, true)();
+		this.overviewIndexService?.triggerDebouncedUpdate();
 	}
 
 	handleFileExplorerClick(evt: MouseEvent): void {
@@ -480,61 +494,6 @@ export default class FolderNotesPlugin extends Plugin {
 		return true;
 	}
 
-	handleOverviewBlock(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
-		const observer = new MutationObserver(() => {
-			const editButton = el.parentElement?.childNodes.item(1);
-			if (editButton) {
-				editButton.addEventListener('click', (e) => {
-					e.stopImmediatePropagation();
-					e.preventDefault();
-					e.stopPropagation();
-					new FolderOverviewSettings(
-						this.app,
-						this,
-						parseYaml(source) as defaultOverviewSettings,
-						ctx,
-						el,
-						this.settings.defaultOverview,
-					).open();
-				}, { capture: true });
-			}
-		});
-
-		observer.observe(el, {
-			childList: true,
-			subtree: true,
-		});
-
-		try {
-			if (this.app.workspace.layoutReady) {
-				const { defaultOverview } = this.settings;
-				const folderOverview = new FolderOverview(
-					this,
-					ctx,
-					source,
-					el,
-					defaultOverview,
-				);
-				void folderOverview.create(this, el, ctx);
-			} else {
-				this.app.workspace.onLayoutReady(() => {
-					const folderOverview = new FolderOverview(
-						this,
-						ctx,
-						source,
-						el,
-						this.settings.defaultOverview,
-					);
-					void folderOverview.create(this, el, ctx);
-				});
-			}
-		} catch (e) {
-			// eslint-disable-next-line max-len
-			new Notice('Error creating folder overview (folder notes plugin) - check console for more details');
-			console.error(e);
-		}
-	}
-
 	async activateOverviewView(): Promise<void> {
 		const { workspace } = this.app;
 
@@ -551,9 +510,6 @@ export default class FolderNotesPlugin extends Plugin {
 		if (!leaf) return;
 		void workspace.revealLeaf(leaf);
 	}
-
-	updateOverviewView: typeof updateOverviewView = updateOverviewView;
-	updateViewDropdown: typeof updateViewDropdown = updateViewDropdown;
 
 	isEmptyFolderNoteFolder(folder: TFolder): boolean {
 		let attachmentFolderPath = this.app.vault.getConfig('attachmentFolderPath') as string;
@@ -593,7 +549,6 @@ export default class FolderNotesPlugin extends Plugin {
 				return folder.children.length <= threshold + 1;
 			}
 			return false;
-
 		}
 		return true;
 	}
@@ -640,9 +595,6 @@ export default class FolderNotesPlugin extends Plugin {
 		breadcrumb.setAttribute('data-path', folder.path);
 	}
 
-	/**
-	 * Updates all folder names in the path above the note editor
-	*/
 	updateAllBreadcrumbs(remove?: boolean): void {
 		if (!this.settings.frontMatterTitle.path && !remove) { return; }
 		const viewHeaderItems = activeDocument.querySelectorAll('span.view-header-breadcrumb');
@@ -665,13 +617,44 @@ export default class FolderNotesPlugin extends Plugin {
 
 	onunload(): void {
 		unregisterFileExplorerObserver();
-		activeDocument.body.classList.remove('folder-notes-plugin');
-		activeDocument.body.classList.remove('folder-note-underline');
-		activeDocument.body.classList.remove('hide-folder-note');
-		activeDocument.body.classList.remove('fn-whitespace-stop-collapsing');
+
+		// Clean up all 15 injected CSS classes
+		const classList = [
+			'folder-notes-plugin',
+			'hide-folder-note',
+			'fn-hide-empty-collapse-icon',
+			'folder-note-hide-name-path',
+			'folder-note-underline',
+			'folder-note-bold',
+			'folder-note-cursive',
+			'folder-note-bold-path',
+			'folder-note-cursive-path',
+			'folder-note-underline-path',
+			'fn-whitespace-stop-collapsing',
+			'fn-hide-collapse-icon',
+			'fn-ignore-attachment-folder',
+			'disable-folder-highlight',
+			'version-1-7-2',
+		];
+		classList.forEach((cls) => activeDocument.body.classList.remove(cls));
+
 		removeActiveFolder(this);
+
 		if (this.fmtpHandler) {
 			this.fmtpHandler.deleteEvent();
+		}
+
+		// Restore monkey patches if needed
+		if (this.originalRevealInFolder) {
+			const fileExplorerPlugin = this.app.internalPlugins.getEnabledPluginById('file-explorer');
+			if (fileExplorerPlugin) {
+				(fileExplorerPlugin as any).revealInFolder = this.originalRevealInFolder;
+			}
+		}
+
+		if (this.originalClipboardProto && this.originalHandleDragOver && this.originalHandleDrop) {
+			this.originalClipboardProto.handleDragOver = this.originalHandleDragOver;
+			this.originalClipboardProto.handleDrop = this.originalHandleDrop;
 		}
 	}
 
@@ -702,10 +685,8 @@ export default class FolderNotesPlugin extends Plugin {
 
 	async saveSettings(reloadStyles?: boolean): Promise<void> {
 		await this.saveData(this.settings);
-		// cleanup any css if we need too
 		if ((!this.settingsOpened || reloadStyles === true) && reloadStyles !== false) {
 			refreshAllFolderStyles(true, this);
 		}
 	}
-
 }

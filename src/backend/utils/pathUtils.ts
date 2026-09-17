@@ -2,7 +2,6 @@ import { TFolder, TFile, View, type TAbstractFile } from 'obsidian';
 import type { FileExplorerWorkspaceLeaf, FileExplorerView } from '../../globals';
 import type FolderNotesPlugin from '../../main';
 import type { FileTreeItem } from 'obsidian-typings';
-import type FolderOverviewPlugin from '../../obsidian-folder-overview/src/main';
 import { getFolderNote } from '../core/FolderNoteResolver';
 
 export function isFileExplorerWorkspaceLeaf(leaf: unknown): leaf is FileExplorerWorkspaceLeaf {
@@ -45,8 +44,9 @@ export function getParentFolderPath(path: string): string {
 }
 
 export function getFileExplorer(
-	plugin: FolderNotesPlugin | FolderOverviewPlugin,
+	plugin: FolderNotesPlugin,
 ): FileExplorerWorkspaceLeaf | undefined {
+
 	let leaf = plugin.app.workspace.getLeavesOfType('file-explorer')[0];
 
 	if (!leaf) { return undefined; }

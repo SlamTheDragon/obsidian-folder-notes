@@ -1,6 +1,6 @@
 import { Modal, Setting, type App } from 'obsidian';
 import type FolderNotesPlugin from '../../main';
-import type { ExcludedFolder } from '../../ExcludeFolders/ExcludeFolder';
+import type { ExcludedFolder } from '../../backend/types/exclude';
 import { updateCSSClassesForFolder } from '../../backend/utils/domUtils';
 
 export class ExcludeFolderModal extends Modal {

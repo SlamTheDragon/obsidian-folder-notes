@@ -1,6 +1,6 @@
 import { Modal, Setting, type App } from 'obsidian';
 import type FolderNotesPlugin from '../../main';
-import type { WhitelistedFolder } from '../../ExcludeFolders/WhitelistFolder';
+import type { WhitelistedFolder } from '../../backend/types/exclude';
 
 export class WhitelistFolderModal extends Modal {
 	plugin: FolderNotesPlugin;

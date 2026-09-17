@@ -1,8 +1,5 @@
-import type { ExcludePattern } from './exclude';
-import type { ExcludedFolder } from './exclude';
-import type { WhitelistedFolder } from './exclude';
-import type { WhitelistedPattern } from './exclude';
-import type { defaultOverviewSettings } from '../../obsidian-folder-overview/src/FolderOverview';
+import type { ExcludePattern, ExcludedFolder, WhitelistedFolder, WhitelistedPattern } from './exclude';
+import { type defaultOverviewSettings, DEFAULT_OVERVIEW_SETTINGS } from './overview';
 
 export interface FolderNotesSettings {
 	syncFolderName: boolean;
@@ -50,8 +47,24 @@ export interface FolderNotesSettings {
 	openByClick: boolean;
 	openWithCtrl: boolean;
 	openWithAlt: boolean;
-	excludeFolderDefaultSettings: ExcludedFolder;
-	excludePatternDefaultSettings: ExcludePattern;
+	excludeFolderDefaultSettings: {
+		subFolders: boolean;
+		disableSync: boolean;
+		disableAutoCreate: boolean;
+		disableFolderNote: boolean;
+		enableCollapsing: boolean;
+		excludeFromFolderOverview: boolean;
+		showFolderNote: boolean;
+	};
+	excludePatternDefaultSettings: {
+		subFolders: boolean;
+		disableSync: boolean;
+		disableAutoCreate: boolean;
+		disableFolderNote: boolean;
+		enableCollapsing: boolean;
+		excludeFromFolderOverview: boolean;
+		showFolderNote: boolean;
+	};
 	hideCollapsingIcon: boolean;
 	hideCollapsingIconForEmptyFolders: boolean;
 	ignoreAttachmentFolder: boolean;
@@ -102,24 +115,7 @@ export const DEFAULT_SETTINGS: FolderNotesSettings = {
 	storageLocation: 'insideFolder',
 	syncDelete: false,
 	showRenameConfirmation: true,
-	defaultOverview: {
-		id: '',
-		folderPath: '',
-		style: 'cards',
-		includeSubfolders: false,
-		sortKey: 'name',
-		sortOrder: 'asc',
-		fields: ['name', 'path'],
-		cardSize: 'medium',
-		showBreadcrumbs: true,
-		showTags: true,
-		titleLength: 0,
-		descriptionLength: 0,
-		contentLength: 0,
-		dateFormat: 'YYYY-MM-DD',
-		timeFormat: 'HH:mm',
-		customCSS: '',
-	},
+	defaultOverview: { ...DEFAULT_OVERVIEW_SETTINGS },
 	useSubmenus: true,
 	syncMove: true,
 	frontMatterTitle: {
@@ -138,22 +134,22 @@ export const DEFAULT_SETTINGS: FolderNotesSettings = {
 	openWithCtrl: false,
 	openWithAlt: false,
 	excludeFolderDefaultSettings: {
-		path: '',
-		hideFolder: false,
-		disableFolderNote: false,
-		disableStyle: false,
+		subFolders: false,
+		disableSync: false,
 		disableAutoCreate: false,
-		disableFolderOverview: false,
-		id: '',
+		disableFolderNote: false,
+		enableCollapsing: false,
+		excludeFromFolderOverview: false,
+		showFolderNote: false,
 	},
 	excludePatternDefaultSettings: {
-		path: '',
-		hideFolder: false,
-		disableFolderNote: false,
-		disableStyle: false,
+		subFolders: false,
+		disableSync: false,
 		disableAutoCreate: false,
-		disableFolderOverview: false,
-		id: '',
+		disableFolderNote: false,
+		enableCollapsing: false,
+		excludeFromFolderOverview: false,
+		showFolderNote: false,
 	},
 	hideCollapsingIcon: false,
 	hideCollapsingIconForEmptyFolders: false,
@@ -181,3 +177,4 @@ export type LegacySettingsData = Partial<FolderNotesSettings> & {
 	allowWhitespaceCollapsing?: boolean;
 	defaultOverview?: defaultOverviewSettings;
 };
+

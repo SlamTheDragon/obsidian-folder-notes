@@ -13,3 +13,4 @@ export * from './events/FrontMatterTitle';
 export * from './events/NavigationInterceptor';
 export * from './events/VaultSyncHandler';
 export * from './events/FileExplorerObserver';
+export * from './overview';

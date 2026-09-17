@@ -15,11 +15,9 @@
 		"test:all": "bun test --preload ./tests/obsidian_mock.ts",
 		"fn-dev": "node esbuild.config.mjs",
 		"fn-build": "node esbuild.config.mjs production",
-		"fv-build": "node ./src/obsidian-folder-overview/esbuild.config.mjs production",
-		"version": "node scripts/version-bump.mjs patch",
-		"folder-overview": "node ./src/obsidian-folder-overview/esbuild.config.mjs",
-		"fv-dev": "npm run folder-overview"
+		"version": "node scripts/version-bump.mjs patch"
 	},
+
 	"keywords": [
 		"obsidian",
 		"obsidian-plugin",

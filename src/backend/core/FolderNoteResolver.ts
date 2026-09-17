@@ -11,7 +11,10 @@ export function extractFolderName(template: string, name: string): string {
 	if (!template.includes('{{folder_name}}')) {
 		return name;
 	}
-	const regex = new RegExp(`^${template.replace('{{folder_name}}', '(.*)')}$`);
+	const escapedTemplate = template
+		.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+		.replace('\\{\\{folder_name\\}\\}', '(.*)');
+	const regex = new RegExp(`^${escapedTemplate}$`);
 	const match = name.match(regex);
 	return match ? match[1] : '';
 }
@@ -46,18 +49,18 @@ export function adjustFolderPathForStorage(
 	plugin: FolderNotesPlugin,
 	storageLocation?: string,
 ): void {
-	if (
-		(plugin.settings.storageLocation === 'parentFolder' ||
-			storageLocation === 'parentFolder') &&
-		storageLocation !== 'insideFolder'
-	) {
+	const location = storageLocation ?? plugin.settings.storageLocation;
+	if (location === 'parentFolder' && storageLocation !== 'insideFolder') {
 		folder.path = getFolderPathFromString(folderPath);
+	} else if (location === 'vaultFolder' && storageLocation !== 'insideFolder') {
+		folder.path = '/';
 	}
 }
 
 export function buildFullPath(folder: { path: string }, fileName: string): string {
 	return folder.path === '/' ? fileName : `${folder.path}/${fileName}`;
 }
+
 
 export function findFolderNoteFile(
 	plugin: FolderNotesPlugin,
@@ -122,18 +125,17 @@ export function getFolder(
 	if (!folderName) return null;
 	let folderPath = getFolderPathFromString(file.path);
 	let folder: TFolder | TAbstractFile | null = null;
+	const location = storageLocation ?? plugin.settings.storageLocation;
 
-	if (
-		(plugin.settings.storageLocation === 'parentFolder' ||
-			storageLocation === 'parentFolder') &&
-		storageLocation !== 'insideFolder'
-	) {
+	if (location === 'parentFolder' && storageLocation !== 'insideFolder') {
 		if (folderPath.trim() === '' || folderPath === '/') {
 			folderPath = folderName;
 		} else {
 			folderPath = `${folderPath}/${folderName}`;
 		}
 		folder = plugin.app.vault.getAbstractFileByPath(folderPath);
+	} else if (location === 'vaultFolder' && storageLocation !== 'insideFolder') {
+		folder = plugin.app.vault.getAbstractFileByPath(folderName);
 	} else {
 		folder = plugin.app.vault.getAbstractFileByPath(folderPath);
 	}
@@ -171,6 +173,8 @@ export function getFolderNoteFolder(
 		} else {
 			folderPath = `${folderPath}/${folderName}`;
 		}
+	} else if (plugin.settings.storageLocation === 'vaultFolder') {
+		folderPath = folderName;
 	} else {
 		folderPath = getFolderPathFromString(filePath);
 	}
@@ -178,6 +182,7 @@ export function getFolderNoteFolder(
 	if (!folder) { return null; }
 	return folder;
 }
+
 
 export function getArgs(
 	plugin: FolderNotesPlugin,

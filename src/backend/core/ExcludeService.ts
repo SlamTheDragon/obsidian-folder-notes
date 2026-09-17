@@ -49,7 +49,7 @@ export function getExcludedFoldersByPattern(
 	plugin: FolderNotesPlugin,
 	folderName: string,
 ): ExcludePattern[] {
-	return plugin.settings.excludeFolders
+	return (plugin.settings?.excludeFolders || [])
 		.filter((s: any) => s.type === 'pattern')
 		.filter((pattern: any) => matchesPatternSpec(pattern.string, folderName)) as ExcludePattern[];
 }
@@ -59,20 +59,27 @@ export function getExcludedFolderByPattern(
 	folderName: string,
 ): ExcludePattern | undefined {
 	return (
-		plugin.settings.excludeFolders
+		(plugin.settings?.excludeFolders || [])
 			.filter((s: any) => s.type === 'pattern')
 			.find((pattern: any) => matchesPatternSpec(pattern.string, folderName))
 	) as ExcludePattern | undefined;
+}
+
+
+function isPathWithinFolder(targetPath: string, folderPath: string): boolean {
+	if (targetPath === folderPath) return true;
+	const folderWithSlash = folderPath.endsWith('/') ? folderPath : `${folderPath}/`;
+	return targetPath.startsWith(folderWithSlash);
 }
 
 export function getExcludedFolderByPath(
 	plugin: FolderNotesPlugin,
 	path: string,
 ): ExcludedFolder | ExcludePattern | undefined {
-	return plugin.settings.excludeFolders.find((excludeFolder: any) => {
+	return (plugin.settings?.excludeFolders || []).find((excludeFolder: any) => {
 		if (excludeFolder.path === path) { return true; }
 		if (!excludeFolder.subFolders) { return false; }
-		return getFolderPathFromString(path).startsWith(excludeFolder.path);
+		return isPathWithinFolder(getFolderPathFromString(path), excludeFolder.path);
 	}) as ExcludedFolder | ExcludePattern | undefined;
 }
 
@@ -80,10 +87,10 @@ export function getExcludedFoldersByPath(
 	plugin: FolderNotesPlugin,
 	path: string,
 ): Array<ExcludedFolder | ExcludePattern> {
-	return plugin.settings.excludeFolders.filter((excludeFolder: any) => {
+	return (plugin.settings?.excludeFolders || []).filter((excludeFolder: any) => {
 		if (excludeFolder.path === path) { return true; }
 		if (!excludeFolder.subFolders) { return false; }
-		return getFolderPathFromString(path).startsWith(excludeFolder.path);
+		return isPathWithinFolder(getFolderPathFromString(path), excludeFolder.path);
 	}) as Array<ExcludedFolder | ExcludePattern>;
 }
 
@@ -91,11 +98,9 @@ export function getWhitelistedFoldersByPattern(
 	plugin: FolderNotesPlugin,
 	folderName: string,
 ): WhitelistedPattern[] {
-	return (
-		plugin.settings.whitelistFolders
-			.filter((s: any) => s.type === 'pattern')
-			.filter((pattern: any) => matchesPatternSpec(pattern.string, folderName))
-	) as WhitelistedPattern[];
+	return (plugin.settings?.whitelistFolders || [])
+		.filter((s: any) => s.type === 'pattern')
+		.filter((pattern: any) => matchesPatternSpec(pattern.string, folderName)) as WhitelistedPattern[];
 }
 
 export function getWhitelistedFolderByPattern(
@@ -103,7 +108,7 @@ export function getWhitelistedFolderByPattern(
 	folderName: string,
 ): WhitelistedPattern | undefined {
 	return (
-		plugin.settings.whitelistFolders
+		(plugin.settings?.whitelistFolders || [])
 			.filter((s: any) => s.type === 'pattern')
 			.find((pattern: any) => matchesPatternSpec(pattern.string, folderName))
 	) as WhitelistedPattern | undefined;
@@ -113,10 +118,10 @@ export function getWhitelistedFoldersByPath(
 	plugin: FolderNotesPlugin,
 	path: string,
 ): Array<WhitelistedFolder | WhitelistedPattern> {
-	return plugin.settings.whitelistFolders.filter((whitelistedFolder: any) => {
+	return (plugin.settings?.whitelistFolders || []).filter((whitelistedFolder: any) => {
 		if (whitelistedFolder.path === path) { return true; }
 		if (!whitelistedFolder.subFolders) { return false; }
-		return getFolderPathFromString(path).startsWith(whitelistedFolder.path);
+		return isPathWithinFolder(getFolderPathFromString(path), whitelistedFolder.path);
 	}) as Array<WhitelistedFolder | WhitelistedPattern>;
 }
 
@@ -124,12 +129,14 @@ export function getWhitelistedFolderByPath(
 	plugin: FolderNotesPlugin,
 	path: string,
 ): WhitelistedFolder | WhitelistedPattern | undefined {
-	return plugin.settings.whitelistFolders.find((whitelistedFolder: any) => {
+	return (plugin.settings?.whitelistFolders || []).find((whitelistedFolder: any) => {
 		if (whitelistedFolder.path === path) { return true; }
 		if (!whitelistedFolder.subFolders) { return false; }
-		return getFolderPathFromString(path).startsWith(whitelistedFolder.path);
+		return isPathWithinFolder(getFolderPathFromString(path), whitelistedFolder.path);
 	}) as WhitelistedFolder | WhitelistedPattern | undefined;
 }
+
+
 
 export function getWhitelistedFolder(
 	plugin: FolderNotesPlugin,
@@ -304,10 +311,10 @@ export function updateExcludedFolder(
 
 export async function deleteExcludedFolder(
 	plugin: FolderNotesPlugin,
-	excludeFolder: ExcludedFolder,
+	excludeFolder: ExcludedFolder | ExcludePattern,
 ): Promise<void> {
 	plugin.settings.excludeFolders = plugin.settings.excludeFolders.filter(
-		(folder: any) => folder.id !== excludeFolder.id || folder.type === 'pattern',
+		(folder: any) => folder.id !== excludeFolder.id,
 	);
 	await plugin.saveSettings(true);
 	resyncArray(plugin);
@@ -335,11 +342,12 @@ export async function deleteWhitelistedFolder(
 	whitelistedFolder: WhitelistedFolder | WhitelistedPattern,
 ): Promise<void> {
 	plugin.settings.whitelistFolders = plugin.settings.whitelistFolders.filter(
-		(folder: any) => folder.id !== whitelistedFolder.id || folder.type === 'pattern',
+		(folder: any) => folder.id !== whitelistedFolder.id,
 	);
 	await plugin.saveSettings(true);
 	resyncArray(plugin);
 }
+
 
 export function updateWhitelistedFolder(
 	plugin: FolderNotesPlugin,

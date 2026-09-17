@@ -157,13 +157,12 @@ export async function handleCreateFolderNote(
 						content = await getDefaultTemplate(plugin.app);
 					}
 				} else {
-					plugin.app.vault.readBinary(templateFile).then(async (data) => {
-						folderNote = await plugin.app.vault.createBinary(path, data);
-						if (openFile) {
-							await leaf.openFile(folderNote);
-						}
-						return folderNote;
-					});
+					const data = await plugin.app.vault.readBinary(templateFile);
+					folderNote = await plugin.app.vault.createBinary(path, data);
+					if (openFile) {
+						await leaf.openFile(folderNote);
+					}
+					return folderNote;
 				}
 			}
 		} else if (
@@ -179,6 +178,7 @@ export async function handleCreateFolderNote(
 	folderNote = await plugin.app.vault.create(path, content);
 	return folderNote;
 }
+
 
 export async function handleTurnNoteIntoFolderNote(
 	plugin: FolderNotesPlugin,
@@ -215,7 +215,7 @@ export async function handleTurnNoteIntoFolderNote(
 		if (!excludedFolder) return;
 		if (!excludedFolderExisted) {
 			deleteExcludedFolder(plugin, excludedFolder);
-		} else if (!disabledSync) {
+		} else if (disabledSync) {
 			excludedFolder.disableSync = false;
 			updateExcludedFolder(plugin, excludedFolder, excludedFolder);
 		}
@@ -258,7 +258,7 @@ export async function turnIntoFolderNote(
 			if (!excludedFolder) return;
 			if (!excludedFolderExisted) {
 				deleteExcludedFolder(plugin, excludedFolder);
-			} else if (!disabledSync) {
+			} else if (disabledSync) {
 				excludedFolder.disableSync = false;
 				updateExcludedFolder(plugin, excludedFolder, excludedFolder);
 			}
@@ -270,12 +270,13 @@ export async function turnIntoFolderNote(
 	let path = `${folder.path}/${fileName}.${extension}`;
 	if (plugin.settings.storageLocation === 'parentFolder') {
 		const parentFolderPath = folder.parent?.path;
-		if (!parentFolderPath) return;
-		if (parentFolderPath.trim() === '' || parentFolderPath === '/') {
+		if (!parentFolderPath || parentFolderPath.trim() === '' || parentFolderPath === '/') {
 			path = `${fileName}.${extension}`;
 		} else {
 			path = `${parentFolderPath}/${fileName}.${extension}`;
 		}
+	} else if (plugin.settings.storageLocation === 'vaultFolder') {
+		path = `${fileName}.${extension}`;
 	}
 
 	if (detachedExcludedFolder) {
@@ -315,13 +316,14 @@ export async function tempDisableSync(
 		excludedFolder.disableSync = true;
 		addExcludedFolder(plugin, excludedFolder);
 	} else if (!excludedFolder.disableSync) {
-		disabledSync = false;
+		disabledSync = true;
 		excludedFolder.disableSync = true;
 		updateExcludedFolder(plugin, excludedFolder, excludedFolder);
 	}
 
 	return [excludedFolder, excludedFolderExisted, disabledSync];
 }
+
 
 export async function openFolderNote(
 	plugin: FolderNotesPlugin,

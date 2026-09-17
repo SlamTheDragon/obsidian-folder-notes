@@ -345,14 +345,22 @@ function renameFolder(
 }
 
 function updateExcludedFolderPath(folder: TFolder, oldPath: string, plugin: FolderNotesPlugin): void {
+	const oldPrefix = oldPath.endsWith('/') ? oldPath : `${oldPath}/`;
+	const newPrefix = folder.path.endsWith('/') ? folder.path : `${folder.path}/`;
+
 	plugin.settings.excludeFolders.forEach((excludedFolder) => {
 		if (excludedFolder.path === oldPath) {
 			excludedFolder.path = folder.path;
+		} else if (excludedFolder.path?.startsWith(oldPrefix)) {
+			excludedFolder.path = newPrefix + excludedFolder.path.slice(oldPrefix.length);
 		}
 	});
 	plugin.settings.whitelistFolders.forEach((whitelistedFolder) => {
 		if (whitelistedFolder.path === oldPath) {
 			whitelistedFolder.path = folder.path;
+		} else if (whitelistedFolder.path?.startsWith(oldPrefix)) {
+			whitelistedFolder.path = newPrefix + whitelistedFolder.path.slice(oldPrefix.length);
 		}
 	});
 }
+

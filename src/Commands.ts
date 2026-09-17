@@ -3,6 +3,7 @@ import {
 	Notice,
 	TFile,
 	Platform,
+	stringifyYaml,
 	type App,
 	type Menu,
 	type TAbstractFile,
@@ -48,7 +49,85 @@ export class Commands {
 		this.editorCommands();
 		this.fileCommands();
 		this.regularCommands();
+		this.overviewCommands();
 	}
+
+	overviewCommands(): void {
+		this.plugin.addCommand({
+			id: 'open-folder-overview-settings',
+			name: 'Edit folder overview',
+			callback: () => {
+				this.plugin.activateOverviewView();
+			},
+		});
+
+		this.plugin.addCommand({
+			id: 'insert-folder-overview',
+			name: 'Insert folder overview',
+			editorCheckCallback: (checking: boolean, editor: Editor) => {
+				const line = editor.getCursor().line;
+				const lineText = editor.getLine(line);
+				if (lineText.trim() === '' || lineText.trim() === '>') {
+					if (!checking) {
+						this.insertOverview(editor);
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.plugin.registerEvent(
+			(this.plugin.app.workspace as any).on('editor-menu', (menu: Menu, editor: Editor, _view: MarkdownView) => {
+				const { line } = editor.getCursor();
+				const lineText = editor.getLine(line);
+				if (lineText.trim() === '' || lineText.trim() === '>') {
+					menu.addItem((item) => {
+						item.setTitle('Insert folder overview')
+							.setIcon('edit')
+							.onClick(() => {
+								this.insertOverview(editor);
+							});
+					});
+				}
+			}),
+		);
+	}
+
+	insertOverview(editor: Editor): void {
+		const { line: cursorLine } = editor.getCursor();
+		const currentLineText = editor.getLine(cursorLine);
+
+		const overviewConfig = { ...this.plugin.settings.defaultOverview, id: crypto.randomUUID() };
+		const yaml = stringifyYaml(overviewConfig);
+		let overviewBlock = `\`\`\`folder-overview\n${yaml}\`\`\`\n`;
+
+		if (overviewConfig.useActualLinks) {
+			overviewBlock +=
+				`<span class="fv-link-list-start" id="${overviewConfig.id}"></span>\n` +
+				`<span class="fv-link-list-end" id="${overviewConfig.id}"></span>\n`;
+		}
+
+		if (currentLineText.trim() === '') {
+			editor.replaceSelection(overviewBlock);
+		} else if (currentLineText.trim() === '>') {
+			const yamlLines = yaml.split(/\r?\n/);
+			const quotedLines = yamlLines.map((yamlLine) => `> ${yamlLine}`);
+			let quotedBlock = `> \`\`\`folder-overview\n${quotedLines.join('\n')}\n> \`\`\`\n`;
+			if (overviewConfig.useActualLinks) {
+				quotedBlock +=
+					`> <span class="fv-link-list-start" id="${overviewConfig.id}"></span>\n` +
+					`> <span class="fv-link-list-end" id="${overviewConfig.id}"></span>\n`;
+			}
+			editor.replaceSelection(quotedBlock);
+		}
+
+		const activeFile = this.plugin.app.workspace.getActiveFile();
+		if (activeFile) {
+			this.plugin.overviewIndexService?.addNote(activeFile);
+		}
+	}
+
 
 	regularCommands(): void {
 		this.plugin.addCommand({

@@ -8,7 +8,6 @@ import {
 import { getFolder, getFolderNote } from '../core/FolderNoteResolver';
 import { getFileExplorer } from './pathUtils';
 import { ExcludedFolder } from '../types/exclude';
-import type FolderOverviewPlugin from '../../obsidian-folder-overview/src/main';
 
 /**
  * Refreshes the CSS classes for all folder notes in the file explorer.
